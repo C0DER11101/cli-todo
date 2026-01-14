@@ -10,25 +10,15 @@ import java.util.HashMap;
 import java.util.ArrayList;
 
 public class FileOps {
-    private String filename;
+    private final String FILENAME = "tasks.txt";
     private File file;
 
     public FileOps() {
-        this.filename = "tasks.txt"; // default name of the text file
-        file = new File(this.filename);
-    }
-
-    public FileOps(String filename) {
-        this.filename = filename;
-        file = new File(this.filename);
+        file = new File(FILENAME);
     }
 
     public boolean doesFileExist() {
         return file.exists();
-    }
-
-    public boolean doesFileExist(String filename) {
-        return new File(filename).exists();
     }
 
     public void write(String text) throws Exception {

@@ -12,9 +12,15 @@ public class CommandOps {
 
     // some regexes
     private final String SPACE_SEP = "[ \t\n]+";
+    private final String WORDS = "[a-zA-Z]+";
+    private final String NUMBERS = "[0-9]+";
+    private final String ALPHANUMERIC = "[a-zA-Z0-9]+";
+    private final String PROJECT_REGEX = "#" + ALPHANUMERIC + "[-_]" + ALPHANUMERIC + ":" + NUMBERS;
+    private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
 
-    private FileOps taskReaderWriter;
+    private FileOps taskReaderWriter; // for reading and writing tasks from and to the tasks file
     private Map<String, List<String>> tasks;
+    private Map<Integer, String> projectIds; // stores the project ids and the project names
 
     // predefined commands and specifiers
     private final String[] COMMANDS = {
@@ -44,17 +50,49 @@ public class CommandOps {
             String specifier = command.trim().split(SPACE_SEP)[1];
             if(isValidSpecifier(specifier)) {
                 // now validate the regex for the specifier
+                String specifierRegex = command.trim().split(SPACE_SEP);
+                if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                    return true;
+                }
             }
         }
 
-        return false; // just a dummy value
+        return false;
     }
 
     private boolean isValidPrefix(String prefix) {
-        return false; // just a dummy value
+        for(String predefinedPrefix : COMMANDS)
+            if(prefix.equals(predefinedPrefix))
+                return true;
+        return false;
     }
 
     private boolean isValidSpecifier(String specifier) {
-        return false; // just a dummy value
+        for(String predefinedSpecifier : SPECIFIERS)
+            if(specifier.equals(predefinedSpecifier))
+                return true;
+        return false;
+    }
+
+    private boolean isValidSpecifierRegex(String regex, String prefix, String specifier) {
+
+        // use the prefix and the specifier to decide how to split 'regex'
+
+        // for the 'create' command
+        if(prefix.equals(COMMANDS[1])) {
+            // splitting for the 'project' specifier
+            if(specifier.equals(SPECIFIERS[0])) {
+                String[] components = regex.trim().split("[-_]"); // split by hyphen or underscore
+
+                if (components.length == 1 && components[0].matches(PROJECT_REGEX))
+                    return true;
+                for (int i = 0; i < components.length; i++)
+                    if (!(components[i].matches(WORDS) || components[i].matches(NUMBERS)))
+                        return false;
+            } else if(specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
+                // first check if a project exists
+            }
+        }
+        return true;
     }
 }
