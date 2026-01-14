@@ -50,7 +50,9 @@ public class CommandOps {
             String specifier = command.trim().split(SPACE_SEP)[1];
             if(isValidSpecifier(specifier)) {
                 // now validate the regex for the specifier
-                String specifierRegex = command.trim().split(SPACE_SEP);
+                if(specifier.equals(SPECIFIERS[2])) // if it's a normal task
+                    return true;
+                String specifierRegex = command.trim().split(SPACE_SEP)[2];
                 if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
                     return true;
                 }
@@ -90,9 +92,10 @@ public class CommandOps {
                     if (!(components[i].matches(WORDS) || components[i].matches(NUMBERS)))
                         return false;
             } else if(specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
-                // first check if a project exists
+                if(!regex.matches(SUBTASK_REGEX))
+                    return false;
             }
         }
         return true;
-    }
-}
+    } /* END isValidSpecifierRegex */
+} /* END CommandOps */

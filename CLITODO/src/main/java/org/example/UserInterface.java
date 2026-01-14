@@ -17,7 +17,7 @@ public class UserInterface {
             String command = input.nextLine();
 
             if(command.length() != 0) {
-                if (commandOperator.isValidCommand(command)) {
+                if (commandOperator.isValidCommand(command)) { // if the command is valid, then execute it
                 } else {
                     System.out.println("Invalid command...");
                 }
