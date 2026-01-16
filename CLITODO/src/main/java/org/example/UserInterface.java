@@ -18,7 +18,6 @@ public class UserInterface {
 
             if(command.length() != 0) {
                 if (commandOperator.isValidCommand(command)) { // if the command is valid, then execute it
-                    // executing the command means to save it in the file
                 } else {
                     System.out.println("Invalid command...");
                 }
