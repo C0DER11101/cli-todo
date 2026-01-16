@@ -17,6 +17,10 @@ public class CommandOps {
     private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
     private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([01][0-2])[-/]([1-9][0-9]{3})";
 
+    // for the dates
+    private String start; // start date
+    private String end; // end date
+
     private FileOps taskReaderWriter; // for reading and writing tasks from and to the tasks file
     private Map<String, List<String>> tasks;
     private Map<Integer, String> projectIds; // stores the project ids and the project names
@@ -31,11 +35,9 @@ public class CommandOps {
 
     // predefined commands and specifiers
     private final String[] COMMANDS = {
-            "list",
             "create",
             "show-tasks",
             "delete",
-            "exit"
     };
 
     private final String[] SPECIFIERS = {
@@ -59,39 +61,46 @@ public class CommandOps {
         String prefix = command.trim().split(SPACE_SEP)[0];
         if(isValidPrefix((prefix))) {
             // next validate the specifier
-            String specifier = command.trim().split(SPACE_SEP)[1];
-            if(isValidSpecifier(specifier)) {
-                // now validate the regex for the specifier
-                if(specifier.equals(SPECIFIERS[2])) { // if it's a normal task
-                    // check the validity of the dates
-                    DateState dateState = isValidDate(command);
-                    // TODO: handle the dates
-                    if(dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
-                        // consider the start and end date to be the day when the task was created
-                    } else if(dateState == DateState.START_DATE) {
-                        // then set the end date to start date as well
-                    } else if(dateState == DateState.END_DATE) {
-                        // then set the start date to end date as well
+            if (prefix.equals(COMMANDS[0])) { // 'create'
+                String specifier = command.trim().split(SPACE_SEP)[1];
+                if (isValidSpecifier(specifier)) {
+                    // now validate the regex for the specifier
+                    if (specifier.equals(SPECIFIERS[2])) { // if it's a normal task
+                        // a normal task has no specifier-regex
+                        // check the validity of the dates
+                        DateState dateState = isValidDate(command);
+                        // TODO: handle the dates
+                        if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
+                            // a date that is invalid or isn't added will be replaced by the date when the task was created, this applies for
+                            // both start date and end date
+                        } else if (dateState == DateState.START_DATE) { // if only the start date is provided
+                            // then set the end date to the start date as well
+                        } else if (dateState == DateState.END_DATE) { // if only the end date is provided
+                            // then set the start date to the end date as well
+                        }
+                        return true; // then there is no need to check for any regex here, simply return true
                     }
-                    return true; // then there is no need to check for any regex here, simply return true
-                }
-                String specifierRegex = command.trim().split(SPACE_SEP)[2];
-                if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                    // now validate the dates
-                    // TODO: handle the dates
-                    DateState dateState = isValidDate(command);
-                    if(dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
-                        // consider the start and end date to be the day when the task was created
-                    } else if(dateState == DateState.START_DATE) {
-                        // then set the end date to start date as well
-                    } else if(dateState == DateState.END_DATE) {
-                        // then set the start date to end date as well
+                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
+                    if (isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                        // now validate the dates
+                        // TODO: handle the dates
+                        DateState dateState = isValidDate(command);
+                        if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
+                            // consider the start and end date to be the day when the task was created
+                        } else if (dateState == DateState.START_DATE) {
+                            // then set the end date to start date as well
+                        } else if (dateState == DateState.END_DATE) {
+                            // then set the start date to end date as well
+                        }
+                        return true;
                     }
-                    return true;
                 }
+            } else if(prefix.equals(COMMANDS[1])) { // 'show-tasks'
+                // display the tasks in directory-tree format
+            } else if(prefix.equals(COMMANDS[2])) { // 'delete'
+                // again, validate the specifiers
             }
         }
-
         return false;
     } /* ENDOF isValidCommand */
 

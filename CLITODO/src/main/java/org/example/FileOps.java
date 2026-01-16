@@ -21,6 +21,11 @@ public class FileOps {
         return file.exists();
     }
 
+    /**
+     * write the tasks one by one into the text file
+     * @param text
+     * @throws Exception
+     */
     public void write(String text) throws Exception {
         try(
                 // open in append mode
@@ -30,6 +35,11 @@ public class FileOps {
         }
     }
 
+    /**
+     * read the tasks one by one from the text file
+     * @return a map of project name and a list of subtasks
+     * @throws Exception
+     */
     public Map<String, List<String>> read() throws Exception {
         Map<String, List<String>> tasks = new HashMap<>();
         try(
@@ -40,5 +50,6 @@ public class FileOps {
                 // INCOMPLETE
             }
         }
+        return null; // just a dummy value
     }
 }
