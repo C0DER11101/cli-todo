@@ -4,6 +4,8 @@ import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+// TODO: NO NEED FOR START DATE OF A TASK, THE START DATE WILL BE ASSUMED AS THE DATE WHEN THE TASK WAS CREATED
+
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
@@ -20,12 +22,15 @@ public class CommandOps {
     private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
 
     // for the dates
+    // TODO: remove `start`
     private String start; // start date
     private String end; // end date
 
     private FileOps taskReaderWriter; // for reading and writing tasks from and to the tasks file
-    private Map<Integer, List<Integer>> tasks; // stores project IDs and the corresponding list of subtask IDs
-    private Map<Integer, String> projectIds; // stores the project ids and the project names
+    private Map<Integer, Map<Integer, String>> tasks; // stores project IDs and the corresponding list of subtask IDs and subtasks
+    private Map<Integer, String> projectIds; // stores the project ids, normal task ids and the project names
+    private Map<Character, String> normalTasks; // stores normal task Ids (as Character) and normal tasks
+    private char id;
 
     private enum DateState {
         VALID,
@@ -40,6 +45,7 @@ public class CommandOps {
             "create",
             "show-tasks",
             "delete",
+            "tick" // tick mark a task as done
     };
 
     private final String[] SPECIFIERS = {
@@ -52,6 +58,7 @@ public class CommandOps {
         tasks = new HashMap<>();
         taskReaderWriter = new FileOps();
         formatter = DateTimeFormatter.ofPattern("dd/MM/YYYY");
+        id = 'a'; // default id for the first normal task
     }
 
     /**
