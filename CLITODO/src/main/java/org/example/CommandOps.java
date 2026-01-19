@@ -4,8 +4,6 @@ import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-// TODO: NO NEED FOR START DATE OF A TASK, THE START DATE WILL BE ASSUMED AS THE DATE WHEN THE TASK WAS CREATED
-
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
@@ -20,24 +18,17 @@ public class CommandOps {
     private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
     private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([01][0-2])[-/]([1-9][0-9]{3})";
     private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
+    private List<Task> tasks;
 
     // for the dates
-    // TODO: remove `start`
-    private String start; // start date
-    private String end; // end date
+    private String dueDate; // end date
 
     private FileOps taskReaderWriter; // for reading and writing tasks from and to the tasks file
-    private Map<Integer, Map<Integer, String>> tasks; // stores project IDs and the corresponding list of subtask IDs and subtasks
-    private Map<Integer, String> projectIds; // stores the project ids, normal task ids and the project names
-    private Map<Character, String> normalTasks; // stores normal task Ids (as Character) and normal tasks
-    private char id;
 
     private enum DateState {
         VALID,
         INVALID,
-        NOTADDED,
-        START_DATE, // if only the start date is provided
-        END_DATE; // if only the end date is provided
+        NOTADDED;
     }
 
     // predefined commands and specifiers
@@ -45,7 +36,8 @@ public class CommandOps {
             "create",
             "show-tasks",
             "delete",
-            "tick" // tick mark a task as done
+            "tick", // tick mark a task as done
+            "edit" // edit a task/subtask/project -- maybe change the due date
     };
 
     private final String[] SPECIFIERS = {
@@ -55,10 +47,9 @@ public class CommandOps {
     };
 
     public CommandOps() {
-        tasks = new HashMap<>();
+        tasks = new ArrayList<>();
         taskReaderWriter = new FileOps();
         formatter = DateTimeFormatter.ofPattern("dd/MM/YYYY");
-        id = 'a'; // default id for the first normal task
     }
 
     /**
@@ -77,20 +68,12 @@ public class CommandOps {
                     // now validate the regex for the specifier
                     if (specifier.equals(SPECIFIERS[2])) { // if it's a normal task
                         // a normal task has no specifier-regex
-                        // check the validity of the dates
+                        // check the validity of the date
                         DateState dateState = isValidDate(command);
                         if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
-                            // a date that is invalid or isn't added will be replaced by the date when the task was created, this applies for
-                            // both start date and end date
+                            // a date that is invalid or isn't added will be replaced by the date when the task was created
                             LocalDate currentDate = LocalDate.now();
-                            start = formatter.format(currentDate);
-                            end = formatter.format(currentDate);
-                        } else if (dateState == DateState.START_DATE) { // if only the start date is provided
-                            // then set the end date to the start date as well
-                            end = formatter.format(LocalDate.parse(start));
-                        } else if (dateState == DateState.END_DATE) { // if only the end date is provided
-                            // then set the start date to the end date as well
-                            start = formatter.format(LocalDate.parse(end));
+                            dueDate = formatter.format(currentDate);
                         }
                         return true; // then there is no need to check for any regex here, simply return true
                     }
@@ -101,14 +84,7 @@ public class CommandOps {
                         if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
                             // consider the start and end date to be the day when the task was created
                             LocalDate currentDate = LocalDate.now();
-                            start = formatter.format(currentDate);
-                            end = formatter.format(currentDate);
-                        } else if (dateState == DateState.START_DATE) {
-                            // then set the end date to start date as well
-                            end = formatter.format(LocalDate.parse(start));
-                        } else if (dateState == DateState.END_DATE) {
-                            // then set the start date to end date as well
-                            start = formatter.format(LocalDate.parse(end));
+                            dueDate = formatter.format(currentDate);
                         }
                         return true;
                     }
@@ -183,104 +159,44 @@ public class CommandOps {
     private DateState isValidDate(String command) {
         String[] components = command.trim().split(":"); // split by colon
 
-        // split the dates into their individual components (i.e., day, month and year)
-        String[] startDate = components[components.length - 2].trim().split("[-/]");
-        String[] endDate = components[components.length - 1].trim().split("[-/]");
+        // split the date into its individual components (i.e., day, month and year)
+        String[] dueDate = components[components.length - 1].trim().split("[-/]");
 
         LocalDate currentDate = LocalDate.now(); // get the current date
 
-        // dates have been entered
-        if(startDate.length == 3 && endDate.length == 3) { // both the start and end dates have been entered
-            // check whether the entered dates are valid or not
-            // check if the dates match the date-regex
-            if(components[components.length - 2].trim().matches(DATE_REGEX) && components[components.length - 1].trim().matches(DATE_REGEX)) {
+        // date has been entered
+        if(dueDate.length == 3) {
+            // check whether the entered date is valid or not
+            // check if the date matches the DATE_REGEX
+            if(components[components.length - 1].trim().matches(DATE_REGEX)) {
                 // check the years
-                int startYear = Integer.valueOf(startDate[2]);
-                int endYear = Integer.valueOf(endDate[2]);
+                int year = Integer.valueOf(dueDate[2]);
 
-                // the years must be equal to or greater than the current year
-                if(!(startYear >= currentDate.getYear() && endYear >= currentDate.getYear()))
+                // if the year of the due-date is less than the current year
+                if(!(year >= currentDate.getYear()))
                     return DateState.INVALID;
-                if(startYear == endYear) { // if the years are the same then
-                    // check the months
-                    int startMonth = Integer.valueOf(startDate[1]);
-                    int endMonth = Integer.valueOf(endDate[1]);
-
-                    // the start and end months must be greater than or equal to the current month
-                    if(!(startMonth >= currentDate.getMonthValue() && endMonth >= currentDate.getMonthValue()))
-                        return DateState.INVALID;
-
-                    if(startMonth <= endMonth) { // if the months are the same then or start month is smaller than the end month
-                        // check the days
-                        int startDay = Integer.valueOf(startDate[0]);
-                        int endDay = Integer.valueOf(endDate[0]);
-                        if(startDay <= endDay || (startDay > endDay && startMonth != endMonth)) {
-                            start = formatter.format(LocalDate.parse(components[components.length - 2]));
-                            end = formatter.format(LocalDate.parse(components[components.length - 1]));
-                            return DateState.VALID;
-                        } else
-                            return DateState.INVALID;
-                    } else if(startMonth > endMonth){ // start month cannot be greater than the end month, if it is then it will be considered invalid
-                        return DateState.INVALID;
-                    }
-                } else if(startYear < endYear) { // if the start year is less than the end year
-                    start = formatter.format(LocalDate.parse(components[components.length - 2]));
-                    end = formatter.format(LocalDate.parse(components[components.length - 1]));
-                    return DateState.VALID; // the date automatically becomes valid, no need to check the months and the days
-                }
-            } else { // if the dates don't match the date-regex
-                return DateState.INVALID;
-            }
-
-        } else if(startDate.length == 3) { // if only start date is provided
-            // check whether the entered date is valid or not
-            // check if the date matches the date-regex
-            if(components[components.length - 1].trim().matches(DATE_REGEX)) {
-                // now check the validity of the year
-                int startYear = Integer.valueOf(startDate[2]);
-
-                if(startYear >= currentDate.getYear()) {
-                    // check the month
-                    int startMonth = Integer.valueOf(startDate[1]);
-                    if(startMonth >= currentDate.getMonthValue()) {
-                        // check the day of the month
-                        int startDay = Integer.valueOf(startDate[0]);
-                        if(startDay >= currentDate.getDayOfMonth()) {
-                            start = formatter.format(LocalDate.parse(components[components.length - 1]));
-                            return DateState.START_DATE;
-                        }
-                        return DateState.INVALID;
-                    }
-                    return DateState.INVALID;
-                }
-                return DateState.INVALID;
-            } else {
-                return DateState.INVALID;
-            }
-        } else if(endDate.length == 3) { // if only end date is provided
-            // check whether the entered date is valid or not
-            if(components[components.length - 1].trim().matches(DATE_REGEX)) {
-                int endYear = Integer.valueOf(endDate[2]);
-                if(endYear >= currentDate.getYear()) {
-                    // check the month
-                    int endMonth = Integer.valueOf(endDate[1]);
-                    if(endMonth >= currentDate.getMonthValue()) {
-                        // check the day of the month
-                        int endDay = Integer.valueOf(endDate[0]);
-                        if(endDay >= currentDate.getDayOfMonth()) {
-                            end = formatter.format(LocalDate.parse(components[components.length - 1]));
-                            return DateState.END_DATE;
-                        }
-                        return DateState.INVALID;
-                    }
-
-                    return DateState.INVALID;
-                }
-            } else {
+                return DateState.VALID;
+            } else { // if the dates don't match the DATE_REGEX
                 return DateState.INVALID;
             }
         }
-
         return DateState.NOTADDED; // if no dates are added
     } /* ENDOF isValidDate */
+
+    /**
+     * Returns the task body i.e. the name of the task.
+     * @param commandComponents
+     * @return
+     */
+    private String getTaskBody(String[] commandComponents) {
+        StringBuilder body = new StringBuilder();
+        if(commandComponents[1].equals(SPECIFIERS[2])) { // for a normal task
+            for(int i = 2; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++)
+                body.append(commandComponents[i]);
+        } else { // for project or a subtask
+            for(int i = 3; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++)
+                body.append(commandComponents[i]);
+        }
+        return body.toString();
+    }
 } /* ENDOF CommandOps */
