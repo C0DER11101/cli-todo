@@ -1,7 +1,5 @@
 package org.example;
 
-import java.io.Serializable;
-
-public enum TaskType implements Serializable {
+public enum TaskType {
     PROJECT, SUBTASK, NORMAL;
 }

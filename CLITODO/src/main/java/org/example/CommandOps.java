@@ -3,6 +3,10 @@ package org.example;
 import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+/*
+TODO: extractTaskID() {write code for 'delete', 'tick' and 'edit'}
+TODO: isValidCommand() {write code for extracting the task ids and also write code for 'delete', 'tick' and 'edit'}
+ */
 
 /**
  * This class contains methods to validate and execute the commands entered by the user
@@ -23,7 +27,7 @@ public class CommandOps {
     // for the dates
     private String dueDate; // end date
 
-    private FileOps taskReaderWriter; // for reading and writing tasks from and to the tasks file
+    private FileOps taskReaderWriter; // for reading/writing tasks from/to the tasks file
 
     private enum DateState {
         VALID,
@@ -75,16 +79,26 @@ public class CommandOps {
                             LocalDate currentDate = LocalDate.now();
                             dueDate = formatter.format(currentDate);
                         }
+
+                        tasks.add(new Task());
                         return true; // then there is no need to check for any regex here, simply return true
                     }
                     String specifierRegex = command.trim().split(SPACE_SEP)[2];
                     if (isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                        // now extract the id(s) from the specifier-regex
+                        String ids = extractTaskID(specifierRegex, prefix, specifier);
                         // now validate the dates
                         DateState dateState = isValidDate(command);
                         if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
                             // consider the start and end date to be the day when the task was created
                             LocalDate currentDate = LocalDate.now();
                             dueDate = formatter.format(currentDate);
+                        }
+
+                        if(ids.contains("-")) { // if a subtask was created
+                            // code here
+                        } else { // if a project was created
+                            // code here
                         }
                         return true;
                     }
@@ -198,5 +212,28 @@ public class CommandOps {
                 body.append(commandComponents[i]);
         }
         return body.toString();
-    }
+    } /*ENDOF getTaskBody */
+
+    /**
+     * Extracts the project and/or subtask ID and returns it/them
+     * @param specifierRegex
+     * @param prefix
+     * @param specifier
+     * @return project and/or subtask ID
+     */
+    private String extractTaskID(String specifierRegex, String prefix, String specifier) {
+        String projectId = null, subtaskId = null;
+        if(prefix.equals(COMMANDS[0])) { // 'create' command
+            if (specifier.equals(SPECIFIERS[0])) { // 'project'
+                projectId = specifierRegex.trim().split(":")[1]; // split by colon
+            } else if (specifier.equals(SPECIFIERS[1])) { // 'subtask'
+                projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1];
+                subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1];
+            }
+        } // now do the same for 'delete', 'tick' and 'edit'
+
+        if(subtaskId == null)
+            return projectId;
+        return projectId + "-" + subtaskId;
+    } /* ENDOF extractTaskID */
 } /* ENDOF CommandOps */

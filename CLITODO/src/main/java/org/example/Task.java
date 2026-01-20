@@ -35,6 +35,15 @@ public class Task implements Serializable {
         this.id = id;
     }
 
+    public void addSubtask(int id, String name, String dueDate, TaskType type) {
+        if(!subtasksExist) {
+            subtasks = new ArrayList<>();
+            subtasksExist = true;
+        }
+
+        subtasks.add(new Task(id, name, dueDate, type));
+    }
+
     public void addSubtask(Task subtask) {
         if(!subtasksExist) {
             subtasks = new ArrayList<>();
