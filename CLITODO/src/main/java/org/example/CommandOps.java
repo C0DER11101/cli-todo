@@ -4,8 +4,7 @@ import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 /*
-TODO: extractTaskID() {write code for 'delete', 'tick' and 'edit'}
-TODO: isValidCommand() {write code for extracting the task ids and also write code for 'delete', 'tick' and 'edit'}
+TODO: isValidCommand() {write code for 'delete', 'tick' and 'edit'}
  */
 
 /**
@@ -22,7 +21,7 @@ public class CommandOps {
     private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
     private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([01][0-2])[-/]([1-9][0-9]{3})";
     private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
-    private List<Task> tasks;
+    private Map<Integer, Task> tasks; // list of tasks
 
     // for the dates
     private String dueDate; // end date
@@ -51,7 +50,7 @@ public class CommandOps {
     };
 
     public CommandOps() {
-        tasks = new ArrayList<>();
+        tasks = new HashMap<>();
         taskReaderWriter = new FileOps();
         formatter = DateTimeFormatter.ofPattern("dd/MM/YYYY");
     }
@@ -80,7 +79,7 @@ public class CommandOps {
                             dueDate = formatter.format(currentDate);
                         }
 
-                        tasks.add(new Task());
+                        // TODO: add the task
                         return true; // then there is no need to check for any regex here, simply return true
                     }
                     String specifierRegex = command.trim().split(SPACE_SEP)[2];
@@ -96,17 +95,67 @@ public class CommandOps {
                         }
 
                         if(ids.contains("-")) { // if a subtask was created
+                            // retrieve project id and the subtask id
+                            int projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                            int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+                            if(tasks.get(projectId) == null) {
+                                System.out.println("A project must exist in order to create a subtask");
+                                return false;
+                            }
+
+                            // TODO: add the subtask
                             // code here
                         } else { // if a project was created
                             // code here
+                            int projectid = Integer.parseInt(ids);
+                            if(tasks.get(projectid) == null) {
+                                // TODO: add the task
+                            }
                         }
                         return true;
                     }
                 }
             } else if(prefix.equals(COMMANDS[1])) { // for the 'show-tasks' command
-                // display the tasks in directory-tree format
+                // TODO: display the tasks in directory-tree format
             } else if(prefix.equals(COMMANDS[2])) { // for the 'delete' command
-                // again, validate the specifiers
+                // validate the specifiers
+                String specifier = command.trim().split(SPACE_SEP)[1];
+                if(isValidSpecifier(specifier)) {
+                    // now validate the specifier regex
+                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
+                    if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                        // extract the task id
+                        String id = extractTaskID(specifierRegex, prefix, specifier);
+
+                        if(id.contains("-")) { // subtask needs to be deleted
+                            // TODO: search for the subtask and delete it
+                            // code here
+                            return true;
+                        }
+
+                        // TODO: search for the project/normal task and delete it
+                        // code here
+                    }
+                }
+            } else if(prefix.equals(COMMANDS[3])) { // the 'tick' command
+                // validate the specifier
+                String specifier = command.trim().split(SPACE_SEP)[1];
+                if(isValidSpecifier(specifier)) {
+                    // validate the specifier-regex
+                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
+                    if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                        // extract the id
+                        String id = extractTaskID(specifierRegex, prefix, specifier);
+                        if(id.contains("-")) {
+                            // TODO: search for the subtask and mark it as done
+                            return true;
+                        }
+
+                        // TODO: search for the project/task and mark it as done
+                    }
+                }
+            } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
+                // TODO: search for the project/subtask/task and then prompt the user to enter a new name for the task
             }
         }
         return false;
@@ -122,7 +171,7 @@ public class CommandOps {
             if(prefix.equals(predefinedPrefix))
                 return true;
         return false;
-    }
+    } /* ENDOF isValidPrefix */
 
     /**
      * Checks whether the specifier is valid or not
@@ -134,7 +183,7 @@ public class CommandOps {
             if(specifier.equals(predefinedSpecifier))
                 return true;
         return false;
-    }
+    } /* ENDOF isValidSpecifier */
 
     /**
      * Checks whether the regular expression entered for the specifier (except 'task') is valid or not
@@ -230,7 +279,14 @@ public class CommandOps {
                 projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1];
                 subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1];
             }
-        } // now do the same for 'delete', 'tick' and 'edit'
+        } else { // for 'delete', 'tick' and 'edit' commands
+            if(specifier.equals(SPECIFIERS[0]) || specifier.equals(SPECIFIERS[2])) { // 'project' or 'task'
+                projectId = specifierRegex.trim().split("#")[1];
+            } else if(specifier.equals(SPECIFIERS[1])) { // 'subtask'
+                projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1];
+                subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1];
+            }
+        }
 
         if(subtaskId == null)
             return projectId;
