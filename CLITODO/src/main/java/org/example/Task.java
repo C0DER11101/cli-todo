@@ -2,6 +2,7 @@ package org.example;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
 
 public class Task implements Serializable {
@@ -31,7 +32,15 @@ public class Task implements Serializable {
         this.type = type;
         subtasks = null;
         subtasksExist = false;
-        state = TaskState.INCOMPLETE;
+        state = TaskState.INCOMPLETE; // default state of a task
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public void addSubtask(int id, String name, String dueDate, TaskType type) {
@@ -62,12 +71,11 @@ public class Task implements Serializable {
         subtasks.put(subtask.id, subtask);
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getId() {
-        return id;
+    public boolean removeSubtask(int id) {
+        if(subtasks.get(id) == null)
+            return false;
+        subtasks.remove(id);
+        return true;
     }
 
     public Task getSubtask(int id) {
@@ -94,6 +102,25 @@ public class Task implements Serializable {
 
     public String getName() {
         return name;
+    }
+
+    public boolean markTaskDone() {
+    }
+
+    public boolean markSubtaskDone(int id) {
+        if(subtasks.get(id) == null)
+            return false;
+        subtasks.get(id).state = TaskState.COMPLETED;
+        return true;
+    }
+
+    public boolean hasUndoneSubtasks() {
+        Set<Integer> ids = subtasks.keySet();
+
+        for(int id : ids)
+            if(subtasks.get(id).state == TaskState.INCOMPLETE)
+                return true;
+        return false;
     }
 
     @Override
