@@ -90,6 +90,10 @@ public class Task implements Serializable {
         return null;
     }
 
+    public Set<Integer> getSubtasks() {
+        return subtasks.keySet();
+    }
+
     public TaskType getTaskType() {
         return type;
     }
@@ -110,6 +114,10 @@ public class Task implements Serializable {
         return name;
     }
 
+    public TaskState getTaskState() {
+        return state;
+    }
+
     public void markTaskDone() {
         this.state = TaskState.COMPLETED;
     }
@@ -121,8 +129,19 @@ public class Task implements Serializable {
         return true;
     }
 
+    public boolean hasSubtasks() {
+        if(subtasks == null)
+            return false;
+        if(subtasks.isEmpty())
+            return false;
+
+        return true;
+    }
+
     public boolean hasUndoneSubtasks() {
         if(subtasks == null) // if no subtasks are available
+            return false;
+        if(subtasks.isEmpty())
             return false;
 
         Set<Integer> ids = subtasks.keySet();

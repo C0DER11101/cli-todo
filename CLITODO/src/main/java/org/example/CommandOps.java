@@ -4,8 +4,8 @@ import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 /*
-TODO: isValidCommand() {write code for 'delete', 'tick' and 'edit'}
 TODO: isValidCommand() should return some status codes instead of returning boolean
+TODO: complete displayTasks() today.
  */
 
 /**
@@ -24,6 +24,12 @@ public class CommandOps {
     private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([01][0-2])[-/]([1-9][0-9]{3})";
     private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
     private Map<Integer, Task> tasks; // list of tasks
+
+    // UNICODE characters
+    private final char BDLUR = '\u2514'; // └
+    private final char BDLH = '\u2500'; // ─
+    private final char BDLVR = '\u251c'; // ├
+    private final char BDLV = '\u2502'; // │
 
     // for the dates
     private String dueDate; // end date
@@ -62,7 +68,7 @@ public class CommandOps {
      * @param command
      * @return boolean
      */
-    public boolean isValidCommand(String command) {
+    public Status isValidCommand(String command) {
         // first validate the prefix
         String prefix = command.trim().split(SPACE_SEP)[0];
         if(isValidPrefix((prefix))) {
@@ -95,10 +101,10 @@ public class CommandOps {
                             int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
                             if(tasks.get(projectId) == null) {
                                 System.out.println("A project must exist in order to create a subtask");
-                                return false;
+                                return Status.ERROR;
                             } else if(tasks.get(projectId).getSubtask(subtaskId) != null) { // if this project already has a subtask with the same id
                                 System.out.println("A subtask with this id already exists...");
-                                return false;
+                                return Status.ERROR;
                             }
 
                             // add the subtask
@@ -111,7 +117,7 @@ public class CommandOps {
                                 tasks.put(id, new Task(id, taskBody, dueDate, specifier.equals(SPECIFIERS[0]) ? TaskType.PROJECT : TaskType.NORMAL));
                             }
                         }
-                        return true;
+                        return Status.VALID;
                     }
                 }
             } else if(prefix.equals(COMMANDS[1])) { // for the 'show-tasks' command
@@ -133,28 +139,37 @@ public class CommandOps {
 
                             if(tasks.get(projectId) == null) {
                                 System.out.println("Cannot delete subtask of a non-existent project");
-                                return false;
+                                return Status.ERROR;
                             }
 
-                            if(tasks.get(projectId).removeSubtask(subtaskId))
+                            if(tasks.get(projectId).removeSubtask(subtaskId)) {
                                 System.out.println("Subtask removed successfully");
-                            else
+                            } else {
                                 System.out.println("Subtask not found");
-                            return true;
+                                return Status.ERROR;
+                            }
+                            return Status.VALID;
                         }
                         // search for the project/task and delete it
                         int id = Integer.parseInt(ids);
                         Task target = tasks.get(id);
+                        if(target == null) {
+                            System.out.println("The project/task with id " + id + " doesn't exist");
+                            return Status.ERROR;
+                        }
+
                         if(target.getTaskType() == TaskType.PROJECT) {
                             // check if it has any incomplete subtasks
-                            if(!target.hasUndoneSubtasks())
+                            if(!target.hasUndoneSubtasks()) {
                                 tasks.remove(id);
-                            else
+                            } else {
                                 System.out.println("This project has incomplete subtasks, not deleting it");
+                                return Status.ERROR;
+                            }
                         } else {
                             tasks.remove(id);
                         }
-                        return true;
+                        return Status.VALID;
                     }
                 }
             } else if(prefix.equals(COMMANDS[3])) { // the 'tick' command
@@ -173,14 +188,14 @@ public class CommandOps {
 
                             if(tasks.get(projectId) == null) {
                                 System.out.println("Cannot tick subtask of a non-existent project");
-                                return false;
+                                return Status.ERROR;
                             }
 
                             if(tasks.get(projectId).markSubtaskDone(subtaskId))
                                 System.out.println("Subtask marked as 'done'");
                             else
                                 System.out.println("Subtask not found");
-                            return true;
+                            return Status.VALID;
                         }
 
                         // search for the project/task and mark it as done
@@ -188,17 +203,20 @@ public class CommandOps {
                         Task target = tasks.get(id);
                         if(target == null) {
                             System.out.println("The project/task with id " + id + " doesn't exist");
-                            return false;
+                            return Status.ERROR;
                         }
                         // mark the project/task as done
-                        if(target.hasUndoneSubtasks())
+                        if(target.hasUndoneSubtasks()) {
                             System.out.println("This project has undone tasks, not marking it");
-                        else
+                            return Status.ERROR;
+                        } else {
                             target.markTaskDone();
+                            return Status.VALID;
+                        }
                     }
                 }
             } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
-                // TODO: search for the project/subtask/task and then prompt the user to enter a new name for the task
+                // search for the project/subtask/task and then prompt the user to enter a new name for the task
                 String specifier = command.trim().split(SPACE_SEP)[1];
                 // validate the specifier
                 if(isValidSpecifier(specifier)) {
@@ -215,7 +233,7 @@ public class CommandOps {
                             Task target = tasks.get(projectId);
                             if(target == null) {
                                 System.out.println("Project of the subtask doesn't exist, not editing");
-                                return false;
+                                return Status.ERROR;
                             }
 
                             System.out.println("What do you want to edit ? ");
@@ -244,15 +262,54 @@ public class CommandOps {
                                 }
                             } catch(InputMismatchException ex) {
                                 System.out.println("Please enter an integer");
+                                return Status.ERROR;
                             }
+
+                            return Status.VALID;
                         } else { // a project/task needs to edited
                             // TODO: edit the project/subtask here
+                            int id = Integer.parseInt(ids);
+                            Task target = tasks.get(id);
+                            if(target == null) {
+                                System.out.println("Project of the subtask doesn't exist, not editing");
+                                return Status.ERROR;
+                            }
+
+                            System.out.println("What do you want to edit ? ");
+                            System.out.println("[1] Task name");
+                            System.out.println("[2] Task due date");
+                            System.out.print("(opt) ");
+                            try(
+                                    Scanner input = new Scanner(System.in)
+                            ) {
+                                int opt = input.nextInt();
+
+                                if(opt == 1) {
+                                    String taskName;
+                                    System.out.print("Enter the new name for the task: ");
+                                    taskName = input.nextLine();
+                                    target.setName(taskName);
+                                } else if(opt == 2) {
+                                    String dueDate;
+                                    System.out.print("Enter the new due date: ");
+                                    dueDate = input.nextLine();
+                                    target.setDueDate(dueDate);
+                                } else {
+                                    System.out.println("Invalid option");
+                                    System.out.println("Aborting process");
+                                }
+                            } catch(InputMismatchException ex) {
+                                System.out.println("Please enter an integer");
+                                return Status.ERROR;
+                            }
+
+                            return Status.VALID;
                         }
                     }
                 }
             }
         }
-        return false;
+        return Status.INVALID;
     } /* ENDOF isValidCommand */
 
     /**
@@ -389,4 +446,18 @@ public class CommandOps {
             return projectId;
         return projectId + "-" + subtaskId;
     } /* ENDOF extractTaskID */
+
+    public void displayTasks() {
+        Set<Integer> ids = tasks.keySet();
+
+        for(int id : ids) {
+            System.out.println(tasks.get(id));
+            if(ids.size() == 1 && tasks.get(id).hasSubtasks()) { // if there is only one project and it has subtasks
+                Task project = tasks.get(id);
+                Set<Integer> subIds = project.getSubtasks();
+                for (int subId : subIds)
+                    System.out.println("" + BDLVR + BDLH + BDLH + project.getSubtask(subId));
+            }
+        }
+    }
 } /* ENDOF CommandOps */
