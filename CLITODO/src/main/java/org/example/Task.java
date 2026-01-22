@@ -1,9 +1,9 @@
 package org.example;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.io.Serializable;
 
 public class Task implements Serializable {
     private int id;
@@ -72,6 +72,9 @@ public class Task implements Serializable {
     }
 
     public boolean removeSubtask(int id) {
+        if(subtasks.isEmpty())
+            return false;
+
         if(subtasks.get(id) == null)
             return false;
         subtasks.remove(id);
@@ -79,6 +82,9 @@ public class Task implements Serializable {
     }
 
     public Task getSubtask(int id) {
+        if(subtasks == null)
+            return null;
+
         if(subtasks.containsKey(id))
             return subtasks.get(id);
         return null;
@@ -104,7 +110,8 @@ public class Task implements Serializable {
         return name;
     }
 
-    public boolean markTaskDone() {
+    public void markTaskDone() {
+        this.state = TaskState.COMPLETED;
     }
 
     public boolean markSubtaskDone(int id) {
@@ -115,6 +122,9 @@ public class Task implements Serializable {
     }
 
     public boolean hasUndoneSubtasks() {
+        if(subtasks == null) // if no subtasks are available
+            return false;
+
         Set<Integer> ids = subtasks.keySet();
 
         for(int id : ids)

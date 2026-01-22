@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 /*
 TODO: isValidCommand() {write code for 'delete', 'tick' and 'edit'}
-TODO: isValidCommand() shoud return some status codes instead of returning boolean
+TODO: isValidCommand() should return some status codes instead of returning boolean
  */
 
 /**
@@ -183,22 +183,73 @@ public class CommandOps {
                             return true;
                         }
 
-                        // TODO: search for the project/task and mark it as done
+                        // search for the project/task and mark it as done
                         int id = Integer.parseInt(ids);
                         Task target = tasks.get(id);
-                        if(target.getTaskType() == TaskType.PROJECT) {
-                            // check if it has any incomplete subtasks
-                            if(!target.hasUndoneSubtasks())
-                                // TODO: mark this project as done
-                            else
-                                System.out.println("This project has incomplete subtasks, not marking it 'done'");
-                        } else {
-                            // TODO: mark this task as done
+                        if(target == null) {
+                            System.out.println("The project/task with id " + id + " doesn't exist");
+                            return false;
                         }
+                        // mark the project/task as done
+                        if(target.hasUndoneSubtasks())
+                            System.out.println("This project has undone tasks, not marking it");
+                        else
+                            target.markTaskDone();
                     }
                 }
             } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
                 // TODO: search for the project/subtask/task and then prompt the user to enter a new name for the task
+                String specifier = command.trim().split(SPACE_SEP)[1];
+                // validate the specifier
+                if(isValidSpecifier(specifier)) {
+                    // validate the specifier regex
+                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
+                    if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                        // extract the ids
+                        String ids = extractTaskID(specifierRegex, prefix, specifier);
+                        if(ids.contains("-")) { // a subtask needs to be edited
+                            int projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                            int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+
+                            // search for the task
+                            Task target = tasks.get(projectId);
+                            if(target == null) {
+                                System.out.println("Project of the subtask doesn't exist, not editing");
+                                return false;
+                            }
+
+                            System.out.println("What do you want to edit ? ");
+                            System.out.println("[1] Task name");
+                            System.out.println("[2] Task due date");
+                            System.out.print("(opt) ");
+                            try(
+                                    Scanner input = new Scanner(System.in)
+                            ) {
+                                int opt = input.nextInt();
+
+                                Task subtask = target.getSubtask(subtaskId);
+                                if(opt == 1) {
+                                    String taskName;
+                                    System.out.print("Enter the new name for the task: ");
+                                    taskName = input.nextLine();
+                                    subtask.setName(taskName);
+                                } else if(opt == 2) {
+                                    String dueDate;
+                                    System.out.print("Enter the new due date: ");
+                                    dueDate = input.nextLine();
+                                    subtask.setDueDate(dueDate);
+                                } else {
+                                    System.out.println("Invalid option");
+                                    System.out.println("Aborting process");
+                                }
+                            } catch(InputMismatchException ex) {
+                                System.out.println("Please enter an integer");
+                            }
+                        } else { // a project/task needs to edited
+                            // TODO: edit the project/subtask here
+                        }
+                    }
+                }
             }
         }
         return false;
