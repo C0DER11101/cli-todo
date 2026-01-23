@@ -5,6 +5,9 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+// FIXME: Task name is not retrieved correctly
+// FIXME: `create project #firstname lastname:1` throws exception.....
+
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
@@ -332,7 +335,7 @@ public class CommandOps {
     } /* ENDOF isValidSpecifier */
 
     /**
-     * Checks whether the regular expression entered for the specifier (except 'task') is valid or not
+     * Checks whether the regular expression entered for the specifier is valid or not
      * @param regex
      * @param prefix
      * @param specifier
@@ -381,7 +384,7 @@ public class CommandOps {
             // check whether the entered date is valid or not
             // check if the date matches the DATE_REGEX
             if(components[components.length - 1].trim().matches(DATE_REGEX)) {
-                // check the years
+                // check the year
                 int year = Integer.parseInt(dateComponents[2]);
 
                 // if the year of the due-date is less than the current year
@@ -402,12 +405,11 @@ public class CommandOps {
      */
     private String getTaskBody(String[] commandComponents) {
         StringBuilder body = new StringBuilder();
-        if(commandComponents[1].equals(SPECIFIERS[2])) { // for a normal task
-            for(int i = 2; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++)
-                body.append(commandComponents[i]);
-        } else { // for project or a subtask
-            for(int i = 3; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++)
-                body.append(commandComponents[i]);
+        for(int i = 3; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++) {
+            if(commandComponents[i].charAt(0) == '#')
+                body.append(commandComponents[i].trim().split("#")[1].trim());
+             else
+                body.append(commandComponents[i] + " ");
         }
         return body.toString();
     } /*ENDOF getTaskBody */
