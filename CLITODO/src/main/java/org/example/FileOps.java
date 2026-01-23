@@ -24,11 +24,12 @@ public class FileOps {
      * write the tasks one by one into the text file
      * @throws IOException
      */
-    public void write() throws IOException {
+    public void write(Map<Integer, Task> tasks) throws IOException {
         try(
-                ObjectInputStream obis = new ObjectInputStream(new FileInputStream(file))
+                ObjectOutputStream obos = new ObjectOutputStream(new FileOutputStream(file))
         ) {
-            // TODO: write the contents to the file
+            // write the contents to the file
+            obos.writeObject(tasks);
         }
     }
 
@@ -39,11 +40,10 @@ public class FileOps {
      */
     public Map<Integer, Task> read() throws IOException , ClassNotFoundException {
         try(
-                ObjectOutputStream obos = new ObjectOutputStream(new FileOutputStream(file))
+                ObjectInputStream obis = new ObjectInputStream(new FileInputStream(file))
         ) {
-            // TODO: read from the file
+            // read from the file
+            return (Map)obis.readObject();
         }
-
-        return null; // replace this statement, this is just a dummy statement
     }
 }

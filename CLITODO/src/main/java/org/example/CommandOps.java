@@ -1,12 +1,9 @@
 package org.example;
 
 import java.util.*;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-/*
-TODO: isValidCommand() should return some status codes instead of returning boolean
-TODO: complete displayTasks() today.
- */
 
 /**
  * This class contains methods to validate and execute the commands entered by the user
@@ -29,7 +26,7 @@ public class CommandOps {
     private final char BDLUR = '\u2514'; // └
     private final char BDLH = '\u2500'; // ─
     private final char BDLVR = '\u251c'; // ├
-    private final char BDLV = '\u2502'; // │
+    //private final char BDLV = '\u2502'; // │
 
     // for the dates
     private String dueDate; // end date
@@ -48,7 +45,9 @@ public class CommandOps {
             "show-tasks",
             "delete",
             "tick", // tick mark a task as done
-            "edit" // edit a task/subtask/project -- maybe change the due date
+            "edit", // edit a task/subtask/project -- maybe change the due date
+            "list", // list the available commands
+            "exit"
     };
 
     private final String[] SPECIFIERS = {
@@ -57,10 +56,18 @@ public class CommandOps {
             "task"
     };
 
-    public CommandOps() {
-        tasks = new HashMap<>();
+    public CommandOps() throws IOException, ClassNotFoundException {
         taskReaderWriter = new FileOps();
+        if(taskReaderWriter.doesFileExist())
+            readTasks();
+        else
+            tasks = new HashMap<>();
         formatter = DateTimeFormatter.ofPattern("dd/MM/YYYY");
+    }
+
+    public void listCommands() {
+        for(int i = 0; i < COMMANDS.length; i++)
+            System.out.println(COMMANDS[i]);
     }
 
     /**
@@ -69,244 +76,232 @@ public class CommandOps {
      * @return boolean
      */
     public Status isValidCommand(String command) {
+        String[] commandComponents = command.trim().split(SPACE_SEP);
+        String prefix = commandComponents[0];
+        String specifier = null;
+        String specifierRegex = null;
+
+        if(commandComponents.length >= 3) {
+            specifier = commandComponents[1];
+            specifierRegex = commandComponents[2];
+        }
+
+        // VALIDATE THE COMMANDS AND THE SPECIFIERS
+        // validate the prefix
+        if(isValidPrefix(prefix)) {
+            if(prefix.equals("show-tasks")) {
+                displayTasks();
+                return Status.VALID;
+            } else if(prefix.equals("list")) {
+                listCommands();
+                return Status.VALID;
+            } else if(prefix.equals(COMMANDS[0]) || prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) {
+                // prefix is either 'create', 'delete', 'tick' or 'edit'
+                if(commandComponents.length < 3)
+                    return Status.INVALID;
+                // validate the specifier
+                if(!isValidSpecifier(specifier))
+                    return Status.INVALID;
+            } else
+                return Status.INVALID;
+        } else {
+            return Status.INVALID;
+        }
+
         // first validate the prefix
-        String prefix = command.trim().split(SPACE_SEP)[0];
-        if(isValidPrefix((prefix))) {
-            // next validate the specifier
-            if (prefix.equals(COMMANDS[0])) { // 'create'
-                // retrieve the specifier
-                String specifier = command.trim().split(SPACE_SEP)[1];
-                if (isValidSpecifier(specifier)) {
-                    // now validate the regex for the specifier
-                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
-                    if (isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                        // now extract the id(s) from the specifier-regex
-                        String ids = extractTaskID(specifierRegex, prefix, specifier);
+        if (prefix.equals(COMMANDS[0])) { // 'create'
+            // now validate the regex for the specifier
+            if (isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                // now extract the id(s) from the specifier-regex
+                String ids = extractTaskID(specifierRegex, prefix, specifier);
 
-                        // next, get the task body/name
-                        String taskBody = getTaskBody(command.split(SPACE_SEP));
+                // next, get the task body/name
+                String taskBody = getTaskBody(commandComponents);
 
-                        // now validate the dates
-                        DateState dateState = isValidDate(command);
-                        if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
-                            // consider the start and end date to be the day when the task was created
-                            LocalDate currentDate = LocalDate.now();
-                            dueDate = formatter.format(currentDate);
-                        }
+                // now validate the dates
+                DateState dateState = isValidDate(command);
+                // if the date was invalid or wasn't added
+                if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
+                    LocalDate currentDate = LocalDate.now(); // then set the current date to the date of task's creation
+                    dueDate = formatter.format(currentDate); // set the date format to dd/MM/YYYY
+                }
 
-                        // if the ids contain a hyphen then
-                        if(ids.contains("-")) { // a subtask was created
-                            // retrieve project id and the subtask id
-                            int projectId = Integer.parseInt(ids.trim().split("-")[0]);
-                            int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
-                            if(tasks.get(projectId) == null) {
-                                System.out.println("A project must exist in order to create a subtask");
-                                return Status.ERROR;
-                            } else if(tasks.get(projectId).getSubtask(subtaskId) != null) { // if this project already has a subtask with the same id
-                                System.out.println("A subtask with this id already exists...");
-                                return Status.ERROR;
-                            }
+                // if the ids contain a hyphen then
+                if(ids.contains("-")) { // a subtask was created
+                    // retrieve project id and the subtask id
+                    int projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                    int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+                    if(tasks.get(projectId) == null) {
+                        System.out.println("A project must exist in order to create a subtask");
+                        return Status.ERROR;
+                    } else if(tasks.get(projectId).getSubtask(subtaskId) != null) { // if this project already has a subtask with the same id
+                        System.out.println("A subtask with this id already exists...");
+                        return Status.ERROR;
+                    }
 
-                            // add the subtask
-                            tasks.get(projectId).addSubtask(subtaskId, taskBody, dueDate, TaskType.SUBTASK);
-                        } else { // if a project/task was created
-                            // code here
-                            int id = Integer.parseInt(ids);
-                            if(tasks.get(id) == null) {
-                                // add the task
-                                tasks.put(id, new Task(id, taskBody, dueDate, specifier.equals(SPECIFIERS[0]) ? TaskType.PROJECT : TaskType.NORMAL));
-                            }
-                        }
-                        return Status.VALID;
+                    // add the subtask
+                    tasks.get(projectId).addSubtask(subtaskId, taskBody, dueDate, TaskType.SUBTASK);
+                } else { // if a project/task was created
+                    int id = Integer.parseInt(ids);
+                    if(tasks.get(id) == null) {
+                        // add the task
+                        tasks.put(id, new Task(id, taskBody, dueDate, specifier.equals(SPECIFIERS[0]) ? TaskType.PROJECT : TaskType.NORMAL));
                     }
                 }
-            } else if(prefix.equals(COMMANDS[1])) { // for the 'show-tasks' command
-                // TODO: display the tasks in directory-tree format
-            } else if(prefix.equals(COMMANDS[2])) { // for the 'delete' command
-                // validate the specifiers
-                String specifier = command.trim().split(SPACE_SEP)[1];
-                if(isValidSpecifier(specifier)) {
-                    // now validate the specifier regex
-                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
-                    if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                        // extract the task id
-                        String ids = extractTaskID(specifierRegex, prefix, specifier);
+                return Status.VALID;
+            }
+        } else if(prefix.equals(COMMANDS[2])) { // for the 'delete' command
+            // now validate the specifier regex
+            if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                // extract the task id
+                String ids = extractTaskID(specifierRegex, prefix, specifier);
 
-                        if(ids.contains("-")) { // subtask needs to be deleted
-                            // search for the subtask and delete it
-                            int projectId = Integer.parseInt(ids.trim().split("-")[0]);
-                            int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+                if(ids.contains("-")) { // subtask needs to be deleted
+                    // search for the subtask and delete it
+                    int projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                    int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
 
-                            if(tasks.get(projectId) == null) {
-                                System.out.println("Cannot delete subtask of a non-existent project");
-                                return Status.ERROR;
-                            }
+                    if(tasks.get(projectId) == null) {
+                        System.out.println("Cannot delete subtask of a non-existent project");
+                        return Status.ERROR;
+                    }
 
-                            if(tasks.get(projectId).removeSubtask(subtaskId)) {
-                                System.out.println("Subtask removed successfully");
-                            } else {
-                                System.out.println("Subtask not found");
-                                return Status.ERROR;
-                            }
-                            return Status.VALID;
-                        }
-                        // search for the project/task and delete it
-                        int id = Integer.parseInt(ids);
-                        Task target = tasks.get(id);
-                        if(target == null) {
-                            System.out.println("The project/task with id " + id + " doesn't exist");
-                            return Status.ERROR;
-                        }
+                    if(tasks.get(projectId).removeSubtask(subtaskId)) {
+                        System.out.println("Subtask removed successfully");
+                    } else {
+                        System.out.println("Subtask not found");
+                        return Status.ERROR;
+                    }
+                    return Status.VALID;
+                }
+                // search for the project/task and delete it
+                int id = Integer.parseInt(ids);
+                Task target = tasks.get(id);
+                if(target == null) {
+                    System.out.println("The project/task with id " + id + " doesn't exist");
+                    return Status.ERROR;
+                }
 
-                        if(target.getTaskType() == TaskType.PROJECT) {
-                            // check if it has any incomplete subtasks
-                            if(!target.hasUndoneSubtasks()) {
-                                tasks.remove(id);
-                            } else {
-                                System.out.println("This project has incomplete subtasks, not deleting it");
-                                return Status.ERROR;
-                            }
-                        } else {
-                            tasks.remove(id);
-                        }
-                        return Status.VALID;
+                if(target.getTaskType() == TaskType.PROJECT) {
+                    // check if it has any incomplete subtasks
+                    if(!target.hasUndoneSubtasks()) {
+                        tasks.remove(id);
+                    } else {
+                        System.out.println("This project has incomplete subtasks, not deleting it");
+                        return Status.ERROR;
+                    }
+                } else {
+                    tasks.remove(id);
+                }
+                return Status.VALID;
+            }
+        } else if(prefix.equals(COMMANDS[3])) { // the 'tick' command
+            // validate the specifier-regex
+            if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                // extract the id
+                String ids = extractTaskID(specifierRegex, prefix, specifier);
+                if(ids.contains("-")) {
+                    // TODO: search for the subtask and mark it as done
+                    int projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                    int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+
+                    if(tasks.get(projectId) == null) {
+                        System.out.println("Cannot tick subtask of a non-existent project");
+                        return Status.ERROR;
+                    }
+
+                    if(tasks.get(projectId).markSubtaskDone(subtaskId))
+                        System.out.println("Subtask marked as 'done'");
+                    else
+                        System.out.println("Subtask not found");
+                    return Status.VALID;
+                }
+
+                // search for the project/task and mark it as done
+                int id = Integer.parseInt(ids);
+                Task target = tasks.get(id);
+                if(target == null) {
+                    System.out.println("The project/task with id " + id + " doesn't exist");
+                    return Status.ERROR;
+                }
+                // mark the project/task as done
+                if(target.hasUndoneSubtasks()) {
+                    System.out.println("This project has undone tasks, not marking it");
+                    return Status.ERROR;
+                } else {
+                    target.markTaskDone();
+                    return Status.VALID;
+                }
+            }
+        } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
+            // search for the project/subtask/task and then prompt the user to enter a new name for the task
+            // validate the specifier regex
+            if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+
+                // extract the ids
+                String ids = extractTaskID(specifierRegex, prefix, specifier);
+
+                int projectId = -1, subtaskId = -1;
+
+                if(ids.contains("-")) { // a subtask needs to be edited
+                    projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                    subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+                } else
+                    projectId = Integer.parseInt(ids);
+
+                // a project/task needs to edited
+                Task target = tasks.get(projectId);
+                Task subtask = null;
+                if(target == null && subtaskId >= 0) {
+                    System.out.println("Project of the subtask doesn't exist, not editing");
+                    return Status.ERROR;
+                } else if(target == null) {
+                    System.out.println("Project doesn't exist, not editing");
+                    return Status.ERROR;
+                }
+
+                if(subtaskId >= 0) {
+                    subtask = target.getSubtask(subtaskId);
+                    if(subtask == null) {
+                        System.out.println("The subtask doesn't exist, not editing");
+                        return Status.ERROR;
                     }
                 }
-            } else if(prefix.equals(COMMANDS[3])) { // the 'tick' command
-                // validate the specifier
-                String specifier = command.trim().split(SPACE_SEP)[1];
-                if(isValidSpecifier(specifier)) {
-                    // validate the specifier-regex
-                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
-                    if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                        // extract the id
-                        String ids = extractTaskID(specifierRegex, prefix, specifier);
-                        if(ids.contains("-")) {
-                            // TODO: search for the subtask and mark it as done
-                            int projectId = Integer.parseInt(ids.trim().split("-")[0]);
-                            int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
 
-                            if(tasks.get(projectId) == null) {
-                                System.out.println("Cannot tick subtask of a non-existent project");
-                                return Status.ERROR;
-                            }
+                System.out.println("What do you want to edit ? ");
+                System.out.println("[1] Task name");
+                System.out.println("[2] Task due date");
+                System.out.print("(opt) ");
+                try(
+                        Scanner input = new Scanner(System.in)
+                ) {
+                    int opt = input.nextInt();
 
-                            if(tasks.get(projectId).markSubtaskDone(subtaskId))
-                                System.out.println("Subtask marked as 'done'");
-                            else
-                                System.out.println("Subtask not found");
-                            return Status.VALID;
-                        }
-
-                        // search for the project/task and mark it as done
-                        int id = Integer.parseInt(ids);
-                        Task target = tasks.get(id);
-                        if(target == null) {
-                            System.out.println("The project/task with id " + id + " doesn't exist");
-                            return Status.ERROR;
-                        }
-                        // mark the project/task as done
-                        if(target.hasUndoneSubtasks()) {
-                            System.out.println("This project has undone tasks, not marking it");
-                            return Status.ERROR;
-                        } else {
-                            target.markTaskDone();
-                            return Status.VALID;
-                        }
+                    if(opt == 1) {
+                        String taskName;
+                        System.out.print("Enter the new name for the task: ");
+                        taskName = input.nextLine();
+                        if(subtask == null)
+                            target.setName(taskName);
+                        else
+                            subtask.setName(taskName);
+                    } else if(opt == 2) {
+                        System.out.print("Enter the new due date: ");
+                        dueDate = input.nextLine();
+                        if(subtask == null)
+                            target.setDueDate(dueDate);
+                        else
+                            subtask.setDueDate(dueDate);
+                    } else {
+                        System.out.println("Invalid option");
+                        System.out.println("Aborting process");
                     }
+                } catch(InputMismatchException ex) {
+                    System.out.println("Please enter an integer");
+                    return Status.ERROR;
                 }
-            } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
-                // search for the project/subtask/task and then prompt the user to enter a new name for the task
-                String specifier = command.trim().split(SPACE_SEP)[1];
-                // validate the specifier
-                if(isValidSpecifier(specifier)) {
-                    // validate the specifier regex
-                    String specifierRegex = command.trim().split(SPACE_SEP)[2];
-                    if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                        // extract the ids
-                        String ids = extractTaskID(specifierRegex, prefix, specifier);
-                        if(ids.contains("-")) { // a subtask needs to be edited
-                            int projectId = Integer.parseInt(ids.trim().split("-")[0]);
-                            int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
 
-                            // search for the task
-                            Task target = tasks.get(projectId);
-                            if(target == null) {
-                                System.out.println("Project of the subtask doesn't exist, not editing");
-                                return Status.ERROR;
-                            }
-
-                            System.out.println("What do you want to edit ? ");
-                            System.out.println("[1] Task name");
-                            System.out.println("[2] Task due date");
-                            System.out.print("(opt) ");
-                            try(
-                                    Scanner input = new Scanner(System.in)
-                            ) {
-                                int opt = input.nextInt();
-
-                                Task subtask = target.getSubtask(subtaskId);
-                                if(opt == 1) {
-                                    String taskName;
-                                    System.out.print("Enter the new name for the task: ");
-                                    taskName = input.nextLine();
-                                    subtask.setName(taskName);
-                                } else if(opt == 2) {
-                                    String dueDate;
-                                    System.out.print("Enter the new due date: ");
-                                    dueDate = input.nextLine();
-                                    subtask.setDueDate(dueDate);
-                                } else {
-                                    System.out.println("Invalid option");
-                                    System.out.println("Aborting process");
-                                }
-                            } catch(InputMismatchException ex) {
-                                System.out.println("Please enter an integer");
-                                return Status.ERROR;
-                            }
-
-                            return Status.VALID;
-                        } else { // a project/task needs to edited
-                            // TODO: edit the project/subtask here
-                            int id = Integer.parseInt(ids);
-                            Task target = tasks.get(id);
-                            if(target == null) {
-                                System.out.println("Project of the subtask doesn't exist, not editing");
-                                return Status.ERROR;
-                            }
-
-                            System.out.println("What do you want to edit ? ");
-                            System.out.println("[1] Task name");
-                            System.out.println("[2] Task due date");
-                            System.out.print("(opt) ");
-                            try(
-                                    Scanner input = new Scanner(System.in)
-                            ) {
-                                int opt = input.nextInt();
-
-                                if(opt == 1) {
-                                    String taskName;
-                                    System.out.print("Enter the new name for the task: ");
-                                    taskName = input.nextLine();
-                                    target.setName(taskName);
-                                } else if(opt == 2) {
-                                    String dueDate;
-                                    System.out.print("Enter the new due date: ");
-                                    dueDate = input.nextLine();
-                                    target.setDueDate(dueDate);
-                                } else {
-                                    System.out.println("Invalid option");
-                                    System.out.println("Aborting process");
-                                }
-                            } catch(InputMismatchException ex) {
-                                System.out.println("Please enter an integer");
-                                return Status.ERROR;
-                            }
-
-                            return Status.VALID;
-                        }
-                    }
-                }
+                return Status.VALID;
             }
         }
         return Status.INVALID;
@@ -356,7 +351,7 @@ public class CommandOps {
                 if (components.length == 1 && components[0].matches(PROJECT_REGEX))
                     return true;
                 for (int i = 0; i < components.length; i++)
-                    if (!(components[i].matches(WORDS) || components[i].matches(NUMBERS)))
+                    if (!components[i].matches(ALPHANUMERIC))
                         return false;
             } else if(specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
                 if(!regex.matches(SUBTASK_REGEX))
@@ -377,17 +372,17 @@ public class CommandOps {
         String[] components = command.trim().split(":"); // split by colon
 
         // split the date into its individual components (i.e., day, month and year)
-        String[] dueDate = components[components.length - 1].trim().split("[-/]");
+        String[] dateComponents = components[components.length - 1].trim().split("[-/]");
 
         LocalDate currentDate = LocalDate.now(); // get the current date
 
         // date has been entered
-        if(dueDate.length == 3) {
+        if(dateComponents.length == 3) {
             // check whether the entered date is valid or not
             // check if the date matches the DATE_REGEX
             if(components[components.length - 1].trim().matches(DATE_REGEX)) {
                 // check the years
-                int year = Integer.valueOf(dueDate[2]);
+                int year = Integer.parseInt(dateComponents[2]);
 
                 // if the year of the due-date is less than the current year
                 if(!(year >= currentDate.getYear()))
@@ -428,17 +423,19 @@ public class CommandOps {
         String projectId = null, subtaskId = null;
         if(prefix.equals(COMMANDS[0])) { // 'create' command
             if (specifier.equals(SPECIFIERS[0])) { // 'project'
-                projectId = specifierRegex.trim().split(":")[1]; // split by colon
+                projectId = specifierRegex.trim().split(":")[1].trim(); // split by colon
             } else if (specifier.equals(SPECIFIERS[1])) { // 'subtask'
-                projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1];
-                subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1];
+                projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1].trim();
+                subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1].trim();
+            } else if(specifier.equals(SPECIFIERS[2])) { // 'task'
+                projectId = specifierRegex.trim().split("#")[1].trim();
             }
         } else { // for 'delete', 'tick' and 'edit' commands
             if(specifier.equals(SPECIFIERS[0]) || specifier.equals(SPECIFIERS[2])) { // 'project' or 'task'
-                projectId = specifierRegex.trim().split("#")[1];
+                projectId = specifierRegex.trim().split("#")[1].trim();
             } else if(specifier.equals(SPECIFIERS[1])) { // 'subtask'
-                projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1];
-                subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1];
+                projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1].trim();
+                subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1].trim();
             }
         }
 
@@ -447,17 +444,37 @@ public class CommandOps {
         return projectId + "-" + subtaskId;
     } /* ENDOF extractTaskID */
 
+    /**
+     * Displays the tasks in directory-tree format
+     */
     public void displayTasks() {
         Set<Integer> ids = tasks.keySet();
 
         for(int id : ids) {
-            System.out.println(tasks.get(id));
-            if(ids.size() == 1 && tasks.get(id).hasSubtasks()) { // if there is only one project and it has subtasks
-                Task project = tasks.get(id);
-                Set<Integer> subIds = project.getSubtasks();
-                for (int subId : subIds)
-                    System.out.println("" + BDLVR + BDLH + BDLH + project.getSubtask(subId));
+            System.out.println(tasks.get(id)); // first print the project
+            Task project = tasks.get(id);
+            if(project.hasSubtasks()) {
+                Set<Integer> subIds = project.getSubtasks(); // retrieve the subtask ids
+                int subTaskCounter = 0;
+                for(int subId : subIds) {
+                    subTaskCounter++;
+                    if (subTaskCounter == subIds.size())
+                        System.out.print("\t" + BDLUR + BDLH + BDLH); // print └── if there is only subtask or if it's the last subtask
+                    else
+                        System.out.print("\t" + BDLVR + BDLH + BDLH); // print ├──
+                    System.out.println(project.getSubtask(subId));
+                }
             }
         }
-    }
+    } /*ENDOF displayTasks */
+
+    public void saveTasks() throws IOException {
+        // save the tasks to file
+        taskReaderWriter.write(tasks);
+    } /* ENDOF saveTasks */
+
+    public void readTasks() throws IOException, ClassNotFoundException {
+        if(taskReaderWriter.doesFileExist())
+            tasks = taskReaderWriter.read();
+    } /* ENDOF readTasks */
 } /* ENDOF CommandOps */

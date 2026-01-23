@@ -14,17 +14,6 @@ public class Task implements Serializable {
     private boolean subtasksExist;
     private Map<Integer, Task> subtasks;
 
-
-    public Task() {
-        id = -1;
-        name = null;
-        dueDate = null;
-        type = null;
-        subtasks = null;
-        subtasksExist = false;
-        state = TaskState.NIL;
-    }
-
     public Task(int id, String name, String dueDate, TaskType type) {
         this.id = id;
         this.name = name;
@@ -33,14 +22,6 @@ public class Task implements Serializable {
         subtasks = null;
         subtasksExist = false;
         state = TaskState.INCOMPLETE; // default state of a task
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getId() {
-        return id;
     }
 
     public void addSubtask(int id, String name, String dueDate, TaskType type) {
@@ -57,6 +38,7 @@ public class Task implements Serializable {
         subtasks.put(id, new Task(id, name, dueDate, type));
     }
 
+    /*
     public void addSubtask(Task subtask) {
         if(!subtasksExist) {
             subtasks = new HashMap<>();
@@ -70,6 +52,7 @@ public class Task implements Serializable {
 
         subtasks.put(subtask.id, subtask);
     }
+    */
 
     public boolean removeSubtask(int id) {
         if(subtasks.isEmpty())
@@ -114,6 +97,7 @@ public class Task implements Serializable {
         return name;
     }
 
+    // this method is for color-based display
     public TaskState getTaskState() {
         return state;
     }
@@ -154,6 +138,6 @@ public class Task implements Serializable {
 
     @Override
     public String toString() {
-        return id + " " + name + " " + dueDate;
+        return id + ": " + name + " " + dueDate;
     }
 }
