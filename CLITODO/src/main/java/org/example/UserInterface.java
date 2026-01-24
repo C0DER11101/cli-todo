@@ -29,7 +29,6 @@ public class UserInterface {
                     System.out.println("Invalid command...");
             }
         }
-
         input.close();
     }
 }

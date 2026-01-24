@@ -1,12 +1,13 @@
 package org.example;
 
+import java.text.NumberFormat;
 import java.util.*;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-// FIXME: Task name is not retrieved correctly
-// FIXME: `create project #firstname lastname:1` throws exception.....
+// FIXME: for some reason, 'edit' command throws NoSuchElementException: No line found, when trying to edit a particular project/subtask/task
+// FIXME: a due-date may match DATE_REGEX, but is it in the range of number of days in a particular month ???
 
 /**
  * This class contains methods to validate and execute the commands entered by the user
@@ -18,7 +19,7 @@ public class CommandOps {
     private final String WORDS = "[a-zA-Z]+";
     private final String NUMBERS = "[0-9]+";
     private final String ALPHANUMERIC = "[a-zA-Z0-9]+";
-    private final String PROJECT_REGEX = "#" + ALPHANUMERIC + "[-_]" + ALPHANUMERIC + ":" + NUMBERS;
+    private final String PROJECT_REGEX = "#" + ALPHANUMERIC + ":" + NUMBERS;
     private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
     private final String TASK_REGEX = "#" + NUMBERS;
     private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([01][0-2])[-/]([1-9][0-9]{3})";
@@ -278,9 +279,11 @@ public class CommandOps {
                 try(
                         Scanner input = new Scanner(System.in)
                 ) {
-                    int opt = input.nextInt();
+                    String opt = input.nextLine();
 
-                    if(opt == 1) {
+                    int selection = Integer.parseInt(opt);
+
+                    if(selection == 1) {
                         String taskName;
                         System.out.print("Enter the new name for the task: ");
                         taskName = input.nextLine();
@@ -288,7 +291,7 @@ public class CommandOps {
                             target.setName(taskName);
                         else
                             subtask.setName(taskName);
-                    } else if(opt == 2) {
+                    } else if(selection == 2) {
                         System.out.print("Enter the new due date: ");
                         dueDate = input.nextLine();
                         if(subtask == null)
@@ -299,7 +302,7 @@ public class CommandOps {
                         System.out.println("Invalid option");
                         System.out.println("Aborting process");
                     }
-                } catch(InputMismatchException ex) {
+                } catch(InputMismatchException | NumberFormatException ex) {
                     System.out.println("Please enter an integer");
                     return Status.ERROR;
                 }
@@ -346,16 +349,20 @@ public class CommandOps {
         // use the prefix and the specifier to decide how to split 'regex'
 
         // for the 'create' command
-        if(prefix.equals(COMMANDS[1])) {
+        if(prefix.equals(COMMANDS[0])) {
             // splitting for the 'project' specifier
             if(specifier.equals(SPECIFIERS[0])) {
                 String[] components = regex.trim().split("[-_]"); // split by hyphen or underscore
 
                 if (components.length == 1 && components[0].matches(PROJECT_REGEX))
                     return true;
-                for (int i = 0; i < components.length; i++)
-                    if (!components[i].matches(ALPHANUMERIC))
-                        return false;
+                if(components[0].matches("#" + ALPHANUMERIC) && components[components.length - 1].matches(ALPHANUMERIC + ":" + NUMBERS)) {
+                    for (int i = 1; i < components.length - 1; i++)
+                        if (!components[i].matches(ALPHANUMERIC))
+                            return false;
+                } else {
+                    return false;
+                }
             } else if(specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
                 if(!regex.matches(SUBTASK_REGEX))
                     return false;
@@ -390,6 +397,7 @@ public class CommandOps {
                 // if the year of the due-date is less than the current year
                 if(!(year >= currentDate.getYear()))
                     return DateState.INVALID;
+                dueDate = components[components.length - 1];
                 return DateState.VALID;
             } else { // if the dates don't match the DATE_REGEX
                 return DateState.INVALID;
@@ -405,12 +413,15 @@ public class CommandOps {
      */
     private String getTaskBody(String[] commandComponents) {
         StringBuilder body = new StringBuilder();
-        for(int i = 3; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++) {
-            if(commandComponents[i].charAt(0) == '#')
-                body.append(commandComponents[i].trim().split("#")[1].trim());
-             else
-                body.append(commandComponents[i] + " ");
+
+        if(commandComponents[1].equals(SPECIFIERS[0])) { // for the 'project' specifier
+            String text = commandComponents[2].trim().split("#")[1].trim().split(":")[0].trim();
+            return text;
         }
+
+        // for the 'subtask' or 'task' specifiers
+        for(int i = 3; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++)
+            body.append(commandComponents[i] + " ");
         return body.toString();
     } /*ENDOF getTaskBody */
 
