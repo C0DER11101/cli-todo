@@ -7,7 +7,11 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 // FIXME: for some reason, 'edit' command throws NoSuchElementException: No line found, when trying to edit a particular project/subtask/task
-// FIXME: a due-date may match DATE_REGEX, but is it in the range of number of days in a particular month ???
+// TODO: understand about NoSuchElementException
+// TODO: why and why is thrown ???
+// source-1: https://stackoverflow.com/questions/13729294/nosuchelementexception-with-java-util-scanner
+// source-2: https://rollbar.com/blog/java-nosuchelementexception/
+// source-3: https://www.educative.io/answers/how-to-resolve-the-javautilnosuchelementexception-in-java
 
 /**
  * This class contains methods to validate and execute the commands entered by the user
@@ -126,6 +130,8 @@ public class CommandOps {
                 DateState dateState = isValidDate(command);
                 // if the date was invalid or wasn't added
                 if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
+                    System.out.println("The due date of this task is set to the creation date.");
+                    System.out.println("You can use the 'edit' command to set the due date manually.");
                     LocalDate currentDate = LocalDate.now(); // then set the current date to the date of task's creation
                     dueDate = formatter.format(currentDate); // set the date format to dd/MM/YYYY
                 }
@@ -238,7 +244,6 @@ public class CommandOps {
                 }
             }
         } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
-            // search for the project/subtask/task and then prompt the user to enter a new name for the task
             // validate the specifier regex
             if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
 
@@ -253,7 +258,7 @@ public class CommandOps {
                 } else
                     projectId = Integer.parseInt(ids);
 
-                // a project/task needs to edited
+                // a project/subtask/task needs to edited
                 Task target = tasks.get(projectId);
                 Task subtask = null;
                 if(target == null && subtaskId >= 0) {
@@ -294,10 +299,15 @@ public class CommandOps {
                     } else if(selection == 2) {
                         System.out.print("Enter the new due date: ");
                         dueDate = input.nextLine();
-                        if(subtask == null)
-                            target.setDueDate(dueDate);
-                        else
-                            subtask.setDueDate(dueDate);
+
+                        if(isValidDate(dueDate) == DateState.VALID) {
+                            if (subtask == null)
+                                target.setDueDate(dueDate);
+                            else
+                                subtask.setDueDate(dueDate);
+                        } else {
+                            System.out.println("Invalid date...Date not set...");
+                        }
                     } else {
                         System.out.println("Invalid option");
                         System.out.println("Aborting process");
@@ -349,25 +359,33 @@ public class CommandOps {
         // use the prefix and the specifier to decide how to split 'regex'
 
         // for the 'create' command
-        if(prefix.equals(COMMANDS[0])) {
+        if (prefix.equals(COMMANDS[0])) {
             // splitting for the 'project' specifier
-            if(specifier.equals(SPECIFIERS[0])) {
+            if (specifier.equals(SPECIFIERS[0])) {
                 String[] components = regex.trim().split("[-_]"); // split by hyphen or underscore
 
                 if (components.length == 1 && components[0].matches(PROJECT_REGEX))
                     return true;
-                if(components[0].matches("#" + ALPHANUMERIC) && components[components.length - 1].matches(ALPHANUMERIC + ":" + NUMBERS)) {
+                if (components[0].matches("#" + ALPHANUMERIC) && components[components.length - 1].matches(ALPHANUMERIC + ":" + NUMBERS)) {
                     for (int i = 1; i < components.length - 1; i++)
                         if (!components[i].matches(ALPHANUMERIC))
                             return false;
                 } else {
                     return false;
                 }
-            } else if(specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
-                if(!regex.matches(SUBTASK_REGEX))
+            } else if (specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
+                if (!regex.matches(SUBTASK_REGEX))
                     return false;
-            } else if(specifier.equals(SPECIFIERS[2])) { // for the 'task' specifier
+            } else if (specifier.equals(SPECIFIERS[2])) { // for the 'task' specifier
+                if (!regex.matches(TASK_REGEX))
+                    return false;
+            }
+        } else if (prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) { // for 'delete', 'tick' or 'edit'
+            if(specifier.equals(SPECIFIERS[0]) || prefix.equals(SPECIFIERS[2])) { // 'project' or 'task'
                 if(!regex.matches(TASK_REGEX))
+                    return false;
+            } else if(specifier.equals(SPECIFIERS[1])) { // 'subtask'
+                if(!regex.matches(SUBTASK_REGEX))
                     return false;
             }
         }
@@ -397,14 +415,45 @@ public class CommandOps {
                 // if the year of the due-date is less than the current year
                 if(!(year >= currentDate.getYear()))
                     return DateState.INVALID;
-                dueDate = components[components.length - 1];
-                return DateState.VALID;
+
+                // validate the number of days in the months
+                int dayOfMonth = Integer.parseInt(dateComponents[0]);
+                int month = Integer.parseInt(dateComponents[1]);
+                if(month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
+                    if(dayOfMonth >= 1 && dayOfMonth <= 31) {
+                        dueDate = components[components.length - 1];
+                        return DateState.VALID;
+                    }
+                    return DateState.INVALID;
+                } else if(month == 2) {
+                    if(isLeap(year) ? dayOfMonth >= 1 && dayOfMonth <= 28 : dayOfMonth >= 1 && dayOfMonth <= 29) {
+                        dueDate = components[components.length - 1];
+                        return DateState.VALID;
+                    }
+
+                    return DateState.INVALID;
+                } else {
+                    if(dayOfMonth >= 1 && dayOfMonth <= 30) {
+                        dueDate = components[components.length - 1];
+                        return DateState.VALID;
+                    }
+                    return DateState.INVALID;
+                }
             } else { // if the dates don't match the DATE_REGEX
                 return DateState.INVALID;
             }
         }
         return DateState.NOTADDED; // if no dates are added
     } /* ENDOF isValidDate */
+
+    /**
+     * is the year leap ?
+     * @param year
+     * @return boolean
+     */
+    private boolean isLeap(int year) {
+        return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
+    }
 
     /**
      * Returns the task body i.e. the name of the task.
@@ -415,8 +464,7 @@ public class CommandOps {
         StringBuilder body = new StringBuilder();
 
         if(commandComponents[1].equals(SPECIFIERS[0])) { // for the 'project' specifier
-            String text = commandComponents[2].trim().split("#")[1].trim().split(":")[0].trim();
-            return text;
+            return commandComponents[2].trim().split("#")[1].trim().split(":")[0].trim();
         }
 
         // for the 'subtask' or 'task' specifiers

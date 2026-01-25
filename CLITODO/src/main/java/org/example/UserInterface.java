@@ -1,10 +1,12 @@
 package org.example;
 
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class UserInterface {
     private Scanner input;
     private CommandOps commandOperator;
+    private String command;
 
     public UserInterface() throws Exception {
         input = new Scanner(System.in);
@@ -15,7 +17,11 @@ public class UserInterface {
     public void prompt() throws Exception {
         while(true) {
             System.out.print("(command) ");
-            String command = input.nextLine();
+            try {
+                command = input.nextLine();
+            } catch(NoSuchElementException ex) {
+                ex.printStackTrace();
+            }
 
             if(command.equals("exit")) {
                 // write to file and then exit
