@@ -22,6 +22,7 @@ create project #<project-name>:<project-id> [:<date>]
 
 A project is basically a big task which can have subtasks.
 The `project-name` cannot contain white-spaces, you can put a hyphen or an underscore between words.
+The `date` must be of the format: `DD-MM-YYYY` or `DD/MM/YYYY`.
 
 To create a subtask (a subtask can only be created for a project):
 ```
