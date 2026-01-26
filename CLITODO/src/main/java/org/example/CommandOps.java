@@ -1,10 +1,11 @@
 package org.example;
 
-import java.text.NumberFormat;
 import java.util.*;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+
+// FIXME: DATE_REGEX has invalid regex for month
 
 /**
  * This class contains methods to validate and execute the commands entered by the user
@@ -13,13 +14,13 @@ public class CommandOps {
 
     // some regexes
     private final String SPACE_SEP = "[ \t\n]+";
-    private final String WORDS = "[a-zA-Z]+";
+    //private final String WORDS = "[a-zA-Z]+";
     private final String NUMBERS = "[0-9]+";
     private final String ALPHANUMERIC = "[a-zA-Z0-9]+";
     private final String PROJECT_REGEX = "#" + ALPHANUMERIC + ":" + NUMBERS;
     private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
     private final String TASK_REGEX = "#" + NUMBERS;
-    private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([01][0-2])[-/]([1-9][0-9]{3})";
+    private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([0][0-9]|[1][0-2])[-/]([1-9][0-9]{3})";
     private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
     private Map<Integer, Task> tasks; // list of tasks
 
@@ -148,7 +149,10 @@ public class CommandOps {
                     int id = Integer.parseInt(ids);
                     if(tasks.get(id) == null) {
                         // add the task
-                        tasks.put(id, new Task(id, taskBody, dueDate, specifier.equals(SPECIFIERS[0]) ? TaskType.PROJECT : TaskType.NORMAL));
+                        tasks.put(id, new Task(id, taskBody, dueDate, specifier.equals(SPECIFIERS[0]) ? TaskType.PROJECT : TaskType.TASK));
+                    } else {
+                        System.out.println("A project/task with id " + id + " already exists");
+                        return Status.ERROR;
                     }
                 }
                 return Status.VALID;
@@ -185,7 +189,7 @@ public class CommandOps {
                     return Status.ERROR;
                 }
 
-                if(target.getTaskType() == TaskType.PROJECT) {
+                if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[0])) {
                     // check if it has any incomplete subtasks
                     if(!target.hasUndoneSubtasks()) {
                         tasks.remove(id);
@@ -193,6 +197,14 @@ public class CommandOps {
                         System.out.println("This project has incomplete subtasks, not deleting it");
                         return Status.ERROR;
                     }
+                } else if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
+                    // if the specifier is 'task' while the task with the id is actually a project
+                    System.out.println("The task is a project. Not deleting it");
+                    return Status.ERROR;
+                } else if(target.getTaskType() == TaskType.TASK && specifier.equals(SPECIFIERS[0])) {
+                    // if the specifier is 'project' while the task with the id is actually a normal task
+                    System.out.println("The task is not a project. Not deleting it");
+                    return Status.ERROR;
                 } else {
                     tasks.remove(id);
                 }
@@ -204,7 +216,7 @@ public class CommandOps {
                 // extract the id
                 String ids = extractTaskID(specifierRegex, prefix, specifier);
                 if(ids.contains("-")) {
-                    // TODO: search for the subtask and mark it as done
+                    // search for the subtask and mark it as done
                     int projectId = Integer.parseInt(ids.trim().split("-")[0]);
                     int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
 
@@ -277,31 +289,38 @@ public class CommandOps {
                 Scanner input = new Scanner(System.in);
                 String opt = input.nextLine();
 
-                int selection = Integer.parseInt(opt);
+                try {
+                    int selection = Integer.parseInt(opt);
 
-                if(selection == 1) {
-                    String taskName;
-                    System.out.print("Enter the new name for the task: ");
-                    taskName = input.nextLine();
-                    if(subtask == null)
-                        target.setName(taskName);
-                    else
-                        subtask.setName(taskName);
-                } else if(selection == 2) {
-                    System.out.print("Enter the new due date: ");
-                    dueDate = input.nextLine();
+                    if (selection == 1) {
+                        String taskName;
+                        System.out.print("Enter the new name for the task: ");
+                        taskName = input.nextLine();
+                        if (subtask == null) {
+                            if (isValidProjectName(taskName)) // follow the convention of naming projects
+                                target.setName(taskName);
+                            else
+                                System.out.println("Invalid name...");
+                        } else
+                            subtask.setName(taskName);
+                    } else if (selection == 2) {
+                        System.out.print("Enter the new due date: ");
+                        dueDate = input.nextLine();
 
-                    if(isValidDate(dueDate) == DateState.VALID) {
-                        if (subtask == null)
-                            target.setDueDate(dueDate);
-                        else
-                            subtask.setDueDate(dueDate);
+                        if (isValidDate(dueDate) == DateState.VALID) {
+                            if (subtask == null)
+                                target.setDueDate(dueDate);
+                            else
+                                subtask.setDueDate(dueDate);
+                        } else {
+                            System.out.println("Invalid date...Date not set...");
+                        }
                     } else {
-                        System.out.println("Invalid date...Date not set...");
+                        System.out.println("Invalid option");
+                        System.out.println("Aborting process");
                     }
-                } else {
-                    System.out.println("Invalid option");
-                    System.out.println("Aborting process");
+                } catch(NumberFormatException ex) {
+                    System.out.println("Not an integer...");
                 }
 
                 return Status.VALID;
@@ -333,6 +352,16 @@ public class CommandOps {
                 return true;
         return false;
     } /* ENDOF isValidSpecifier */
+
+    private boolean isValidProjectName(String name) {
+        String[] components = name.trim().split("[-_]");
+        for(int i = 0; i < components.length; i++) {
+            if(!components[i].matches(ALPHANUMERIC))
+                return false;
+        }
+
+        return true;
+    }
 
     /**
      * Checks whether the regular expression entered for the specifier is valid or not
