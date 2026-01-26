@@ -20,6 +20,9 @@ To create a project:
 create project #<project-name>:<project-id> [:<date>]
 ```
 
+A project is basically a big task which can have subtasks.
+The `project-name` cannot contain white-spaces, you can put a hyphen or an underscore between words.
+
 To create a subtask (a subtask can only be created for a project):
 ```
 create subtask #<project-id>:#<subtask-id> <name> [:<date>]
@@ -82,6 +85,12 @@ edit task #<task-id>
 
 # `NoSuchElementException` in `Scanner`
 
+While working on my `edit` command I encountered this exception. I was actually using the try-with-resources statement to create a `Scanner` object and then using it to take input from the user. Because the object was created via the try-with-resources statement, it was automatically closed at the end of the block. As a result of this, the standard input stream was also closed which meant that any other `Scanner` object attempting to read from `System.in` will fail and this exception will be thrown.
+
 * <a href="https://stackoverflow.com/questions/13042008/java-util-nosuchelementexception-scanner-reading-user-input"><code>NoSuchElementException</code></a>
+
+# Current version
+
+Currently, one can only create, delete, edit, tick and view  projects/subtasks/tasks. 
 
 ---
