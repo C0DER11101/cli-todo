@@ -413,7 +413,7 @@ public class CommandOps {
                     }
                     return DateState.INVALID;
                 } else if(month == 2) {
-                    if(isLeap(year) ? dayOfMonth >= 1 && dayOfMonth <= 28 : dayOfMonth >= 1 && dayOfMonth <= 29) {
+                    if(isLeap(year) ? dayOfMonth >= 1 && dayOfMonth <= 29 : dayOfMonth >= 1 && dayOfMonth <= 28) {
                         dueDate = components[components.length - 1];
                         return DateState.VALID;
                     }
