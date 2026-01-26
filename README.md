@@ -94,4 +94,36 @@ While working on my `edit` command I encountered this exception. I was actually 
 
 Currently, one can only create, delete, edit, tick and view  projects/subtasks/tasks. 
 
+# Screenshots
+
+* `list` command
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss0.png" width="50%" height="50%">
+
+* `create` command
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss1.png" width="50%" height="50%">
+
+Creating subtasks:
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss2.png" width="50%" height="50%">
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss3.png" width="50%" height="50%">
+
+* `delete` command
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss4.png" width="50%" height="50%">
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss5.png" width="50%" height="50%">
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss6.png" width="50%" height="50%">
+
+* `edit` command
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss8.png" width="50%" height="50%">
+
+* `tick` command
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss9.png" width="50%" height="50%">
+
 ---
