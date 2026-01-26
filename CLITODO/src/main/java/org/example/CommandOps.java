@@ -6,13 +6,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-// FIXME: for some reason, 'edit' command throws NoSuchElementException: No line found, when trying to edit a particular project/subtask/task
-// TODO: understand about NoSuchElementException
-// TODO: why and why is thrown ???
-// source-1: https://stackoverflow.com/questions/13729294/nosuchelementexception-with-java-util-scanner
-// source-2: https://rollbar.com/blog/java-nosuchelementexception/
-// source-3: https://www.educative.io/answers/how-to-resolve-the-javautilnosuchelementexception-in-java
-
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
@@ -281,40 +274,34 @@ public class CommandOps {
                 System.out.println("[1] Task name");
                 System.out.println("[2] Task due date");
                 System.out.print("(opt) ");
-                try(
-                        Scanner input = new Scanner(System.in)
-                ) {
-                    String opt = input.nextLine();
+                Scanner input = new Scanner(System.in);
+                String opt = input.nextLine();
 
-                    int selection = Integer.parseInt(opt);
+                int selection = Integer.parseInt(opt);
 
-                    if(selection == 1) {
-                        String taskName;
-                        System.out.print("Enter the new name for the task: ");
-                        taskName = input.nextLine();
-                        if(subtask == null)
-                            target.setName(taskName);
+                if(selection == 1) {
+                    String taskName;
+                    System.out.print("Enter the new name for the task: ");
+                    taskName = input.nextLine();
+                    if(subtask == null)
+                        target.setName(taskName);
+                    else
+                        subtask.setName(taskName);
+                } else if(selection == 2) {
+                    System.out.print("Enter the new due date: ");
+                    dueDate = input.nextLine();
+
+                    if(isValidDate(dueDate) == DateState.VALID) {
+                        if (subtask == null)
+                            target.setDueDate(dueDate);
                         else
-                            subtask.setName(taskName);
-                    } else if(selection == 2) {
-                        System.out.print("Enter the new due date: ");
-                        dueDate = input.nextLine();
-
-                        if(isValidDate(dueDate) == DateState.VALID) {
-                            if (subtask == null)
-                                target.setDueDate(dueDate);
-                            else
-                                subtask.setDueDate(dueDate);
-                        } else {
-                            System.out.println("Invalid date...Date not set...");
-                        }
+                            subtask.setDueDate(dueDate);
                     } else {
-                        System.out.println("Invalid option");
-                        System.out.println("Aborting process");
+                        System.out.println("Invalid date...Date not set...");
                     }
-                } catch(InputMismatchException | NumberFormatException ex) {
-                    System.out.println("Please enter an integer");
-                    return Status.ERROR;
+                } else {
+                    System.out.println("Invalid option");
+                    System.out.println("Aborting process");
                 }
 
                 return Status.VALID;
