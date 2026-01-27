@@ -28,7 +28,6 @@ public class FileOps {
         try(
                 ObjectOutputStream obos = new ObjectOutputStream(new FileOutputStream(file))
         ) {
-            // write the contents to the file
             obos.writeObject(tasks);
         }
     }
@@ -42,7 +41,6 @@ public class FileOps {
         try(
                 ObjectInputStream obis = new ObjectInputStream(new FileInputStream(file))
         ) {
-            // read from the file
             return (Map)obis.readObject();
         }
     }

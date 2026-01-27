@@ -12,7 +12,6 @@ public class UserInterface {
         commandOperator = new CommandOps();
     }
 
-    // prompt the user to enter commands
     public void prompt() throws IOException {
         input = new Scanner(System.in);
         while(true) {
@@ -20,8 +19,7 @@ public class UserInterface {
             command = input.nextLine();
 
             if(command.equals("exit")) {
-                // write to file and then exit
-                commandOperator.saveTasks(); // save the tasks and exit
+                commandOperator.saveTasks();
                 break;
             } else if(!command.isEmpty()) {
                 Status commandStatus = commandOperator.isValidCommand(command);
