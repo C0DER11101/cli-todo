@@ -18,8 +18,8 @@ public class CommandOps {
     private final String SUBTASK_REGEX = "#" + NUMBERS + ":" + "#" + NUMBERS;
     private final String TASK_REGEX = "#" + NUMBERS;
     private final String DATE_REGEX = "([0-2][0-9]|[3][01])[-/]([0][0-9]|[1][0-2])[-/]([1-9][0-9]{3})";
-    private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
-    private Map<Integer, Task> tasks; // list of tasks
+    private final DateTimeFormatter formatter;
+    private Map<Integer, Task> tasks;
 
     private final char BDLUR = '\u2514'; // └
     private final char BDLH = '\u2500'; // ─
