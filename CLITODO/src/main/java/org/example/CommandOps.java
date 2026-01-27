@@ -5,14 +5,11 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-// FIXME: DATE_REGEX has invalid regex for month
-
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
 public class CommandOps {
 
-    // some regexes
     private final String SPACE_SEP = "[ \t\n]+";
     //private final String WORDS = "[a-zA-Z]+";
     private final String NUMBERS = "[0-9]+";
@@ -24,16 +21,14 @@ public class CommandOps {
     private final DateTimeFormatter formatter; // for formatting the dates in a particular pattern
     private Map<Integer, Task> tasks; // list of tasks
 
-    // UNICODE characters
     private final char BDLUR = '\u2514'; // └
     private final char BDLH = '\u2500'; // ─
     private final char BDLVR = '\u251c'; // ├
     //private final char BDLV = '\u2502'; // │
 
-    // for the dates
-    private String dueDate; // end date
+    private String dueDate;
 
-    private FileOps taskReaderWriter; // for reading/writing tasks from/to the tasks file
+    private FileOps taskReaderWriter;
 
     private enum DateState {
         VALID,
@@ -41,14 +36,13 @@ public class CommandOps {
         NOTADDED;
     }
 
-    // predefined commands and specifiers
     private final String[] COMMANDS = {
             "create",
             "show-tasks",
             "delete",
             "tick", // tick mark a task as done
-            "edit", // edit a task/subtask/project -- maybe change the due date
-            "list", // list the available commands
+            "edit",
+            "list",
             "exit"
     };
 
@@ -110,19 +104,16 @@ public class CommandOps {
             return Status.INVALID;
         }
 
-        // first validate the prefix
-        if (prefix.equals(COMMANDS[0])) { // 'create'
-            // now validate the regex for the specifier
+        if (prefix.equals(COMMANDS[0])) {
+            // validate the regex for the specifier
             if (isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                // now extract the id(s) from the specifier-regex
+                // extract the id(s) from the specifier-regex
                 String ids = extractTaskID(specifierRegex, prefix, specifier);
 
-                // next, get the task body/name
                 String taskBody = getTaskBody(commandComponents);
 
-                // now validate the dates
                 DateState dateState = isValidDate(command);
-                // if the date was invalid or wasn't added
+
                 if (dateState == DateState.INVALID || dateState == DateState.NOTADDED) {
                     System.out.println("The due date of this task is set to the creation date.");
                     System.out.println("You can use the 'edit' command to set the due date manually.");
@@ -130,7 +121,6 @@ public class CommandOps {
                     dueDate = formatter.format(currentDate); // set the date format to dd/MM/YYYY
                 }
 
-                // if the ids contain a hyphen then
                 if(ids.contains("-")) { // a subtask was created
                     // retrieve project id and the subtask id
                     int projectId = Integer.parseInt(ids.trim().split("-")[0]);
@@ -148,7 +138,6 @@ public class CommandOps {
                 } else { // if a project/task was created
                     int id = Integer.parseInt(ids);
                     if(tasks.get(id) == null) {
-                        // add the task
                         tasks.put(id, new Task(id, taskBody, dueDate, specifier.equals(SPECIFIERS[0]) ? TaskType.PROJECT : TaskType.TASK));
                     } else {
                         System.out.println("A project/task with id " + id + " already exists");
@@ -157,14 +146,11 @@ public class CommandOps {
                 }
                 return Status.VALID;
             }
-        } else if(prefix.equals(COMMANDS[2])) { // for the 'delete' command
-            // now validate the specifier regex
+        } else if(prefix.equals(COMMANDS[2])) {
             if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                // extract the task id
                 String ids = extractTaskID(specifierRegex, prefix, specifier);
 
                 if(ids.contains("-")) { // subtask needs to be deleted
-                    // search for the subtask and delete it
                     int projectId = Integer.parseInt(ids.trim().split("-")[0]);
                     int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
 
@@ -181,7 +167,6 @@ public class CommandOps {
                     }
                     return Status.VALID;
                 }
-                // search for the project/task and delete it
                 int id = Integer.parseInt(ids);
                 Task target = tasks.get(id);
                 if(target == null) {
@@ -190,7 +175,6 @@ public class CommandOps {
                 }
 
                 if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[0])) {
-                    // check if it has any incomplete subtasks
                     if(!target.hasUndoneSubtasks()) {
                         tasks.remove(id);
                     } else {
@@ -198,11 +182,9 @@ public class CommandOps {
                         return Status.ERROR;
                     }
                 } else if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
-                    // if the specifier is 'task' while the task with the id is actually a project
                     System.out.println("The task is a project. Not deleting it");
                     return Status.ERROR;
                 } else if(target.getTaskType() == TaskType.TASK && specifier.equals(SPECIFIERS[0])) {
-                    // if the specifier is 'project' while the task with the id is actually a normal task
                     System.out.println("The task is not a project. Not deleting it");
                     return Status.ERROR;
                 } else {
@@ -210,13 +192,10 @@ public class CommandOps {
                 }
                 return Status.VALID;
             }
-        } else if(prefix.equals(COMMANDS[3])) { // the 'tick' command
-            // validate the specifier-regex
+        } else if(prefix.equals(COMMANDS[3])) {
             if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
-                // extract the id
                 String ids = extractTaskID(specifierRegex, prefix, specifier);
                 if(ids.contains("-")) {
-                    // search for the subtask and mark it as done
                     int projectId = Integer.parseInt(ids.trim().split("-")[0]);
                     int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
 
@@ -232,14 +211,12 @@ public class CommandOps {
                     return Status.VALID;
                 }
 
-                // search for the project/task and mark it as done
                 int id = Integer.parseInt(ids);
                 Task target = tasks.get(id);
                 if(target == null) {
                     System.out.println("The project/task with id " + id + " doesn't exist");
                     return Status.ERROR;
                 }
-                // mark the project/task as done
                 if(target.hasUndoneSubtasks()) {
                     System.out.println("This project has undone tasks, not marking it");
                     return Status.ERROR;
@@ -248,11 +225,9 @@ public class CommandOps {
                     return Status.VALID;
                 }
             }
-        } else if(prefix.equals(COMMANDS[4])) { // the 'edit' command
-            // validate the specifier regex
+        } else if(prefix.equals(COMMANDS[4])) {
             if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
 
-                // extract the ids
                 String ids = extractTaskID(specifierRegex, prefix, specifier);
 
                 int projectId = -1, subtaskId = -1;
@@ -372,13 +347,9 @@ public class CommandOps {
      */
     private boolean isValidSpecifierRegex(String regex, String prefix, String specifier) {
 
-        // use the prefix and the specifier to decide how to split 'regex'
-
-        // for the 'create' command
         if (prefix.equals(COMMANDS[0])) {
-            // splitting for the 'project' specifier
             if (specifier.equals(SPECIFIERS[0])) {
-                String[] components = regex.trim().split("[-_]"); // split by hyphen or underscore
+                String[] components = regex.trim().split("[-_]");
 
                 if (components.length == 1 && components[0].matches(PROJECT_REGEX))
                     return true;
@@ -389,18 +360,18 @@ public class CommandOps {
                 } else {
                     return false;
                 }
-            } else if (specifier.equals(SPECIFIERS[1])) { // for the 'subtask' specifier
+            } else if (specifier.equals(SPECIFIERS[1])) {
                 if (!regex.matches(SUBTASK_REGEX))
                     return false;
-            } else if (specifier.equals(SPECIFIERS[2])) { // for the 'task' specifier
+            } else if (specifier.equals(SPECIFIERS[2])) {
                 if (!regex.matches(TASK_REGEX))
                     return false;
             }
-        } else if (prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) { // for 'delete', 'tick' or 'edit'
-            if(specifier.equals(SPECIFIERS[0]) || prefix.equals(SPECIFIERS[2])) { // 'project' or 'task'
+        } else if (prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) {
+            if(specifier.equals(SPECIFIERS[0]) || prefix.equals(SPECIFIERS[2])) {
                 if(!regex.matches(TASK_REGEX))
                     return false;
-            } else if(specifier.equals(SPECIFIERS[1])) { // 'subtask'
+            } else if(specifier.equals(SPECIFIERS[1])) {
                 if(!regex.matches(SUBTASK_REGEX))
                     return false;
             }
@@ -413,26 +384,19 @@ public class CommandOps {
      * @return one of the three predefined states of date
      */
     private DateState isValidDate(String command) {
-        String[] components = command.trim().split(":"); // split by colon
+        String[] components = command.trim().split(":");
 
-        // split the date into its individual components (i.e., day, month and year)
         String[] dateComponents = components[components.length - 1].trim().split("[-/]");
 
         LocalDate currentDate = LocalDate.now(); // get the current date
 
-        // date has been entered
         if(dateComponents.length == 3) {
-            // check whether the entered date is valid or not
-            // check if the date matches the DATE_REGEX
             if(components[components.length - 1].trim().matches(DATE_REGEX)) {
-                // check the year
                 int year = Integer.parseInt(dateComponents[2]);
 
-                // if the year of the due-date is less than the current year
                 if(!(year >= currentDate.getYear()))
                     return DateState.INVALID;
 
-                // validate the number of days in the months
                 int dayOfMonth = Integer.parseInt(dateComponents[0]);
                 int month = Integer.parseInt(dateComponents[1]);
                 if(month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
@@ -455,11 +419,11 @@ public class CommandOps {
                     }
                     return DateState.INVALID;
                 }
-            } else { // if the dates don't match the DATE_REGEX
+            } else {
                 return DateState.INVALID;
             }
         }
-        return DateState.NOTADDED; // if no dates are added
+        return DateState.NOTADDED;
     } /* ENDOF isValidDate */
 
     /**
@@ -479,7 +443,7 @@ public class CommandOps {
     private String getTaskBody(String[] commandComponents) {
         StringBuilder body = new StringBuilder();
 
-        if(commandComponents[1].equals(SPECIFIERS[0])) { // for the 'project' specifier
+        if(commandComponents[1].equals(SPECIFIERS[0])) {
             return commandComponents[2].trim().split("#")[1].trim().split(":")[0].trim();
         }
 
@@ -498,19 +462,19 @@ public class CommandOps {
      */
     private String extractTaskID(String specifierRegex, String prefix, String specifier) {
         String projectId = null, subtaskId = null;
-        if(prefix.equals(COMMANDS[0])) { // 'create' command
-            if (specifier.equals(SPECIFIERS[0])) { // 'project'
-                projectId = specifierRegex.trim().split(":")[1].trim(); // split by colon
-            } else if (specifier.equals(SPECIFIERS[1])) { // 'subtask'
+        if(prefix.equals(COMMANDS[0])) {
+            if (specifier.equals(SPECIFIERS[0])) {
+                projectId = specifierRegex.trim().split(":")[1].trim();
+            } else if (specifier.equals(SPECIFIERS[1])) {
                 projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1].trim();
                 subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1].trim();
-            } else if(specifier.equals(SPECIFIERS[2])) { // 'task'
+            } else if(specifier.equals(SPECIFIERS[2])) {
                 projectId = specifierRegex.trim().split("#")[1].trim();
             }
-        } else { // for 'delete', 'tick' and 'edit' commands
-            if(specifier.equals(SPECIFIERS[0]) || specifier.equals(SPECIFIERS[2])) { // 'project' or 'task'
+        } else {
+            if(specifier.equals(SPECIFIERS[0]) || specifier.equals(SPECIFIERS[2])) {
                 projectId = specifierRegex.trim().split("#")[1].trim();
-            } else if(specifier.equals(SPECIFIERS[1])) { // 'subtask'
+            } else if(specifier.equals(SPECIFIERS[1])) {
                 projectId = specifierRegex.trim().split(":")[0].trim().split("#")[1].trim();
                 subtaskId = specifierRegex.trim().split(":")[1].trim().split("#")[1].trim();
             }
@@ -528,10 +492,10 @@ public class CommandOps {
         Set<Integer> ids = tasks.keySet();
 
         for(int id : ids) {
-            System.out.println(tasks.get(id)); // first print the project
+            System.out.println(tasks.get(id));
             Task project = tasks.get(id);
             if(project.hasSubtasks()) {
-                Set<Integer> subIds = project.getSubtasks(); // retrieve the subtask ids
+                Set<Integer> subIds = project.getSubtasks();
                 int subTaskCounter = 0;
                 for(int subId : subIds) {
                     subTaskCounter++;
@@ -546,7 +510,6 @@ public class CommandOps {
     } /*ENDOF displayTasks */
 
     public void saveTasks() throws IOException {
-        // save the tasks to file
         taskReaderWriter.write(tasks);
     } /* ENDOF saveTasks */
 

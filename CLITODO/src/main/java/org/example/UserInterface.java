@@ -1,27 +1,23 @@
 package org.example;
 
-import java.util.NoSuchElementException;
 import java.util.Scanner;
+import java.io.IOException;
 
 public class UserInterface {
     private Scanner input;
     private CommandOps commandOperator;
     private String command;
 
-    public UserInterface() throws Exception {
-        input = new Scanner(System.in);
+    public UserInterface() throws IOException, ClassNotFoundException {
         commandOperator = new CommandOps();
     }
 
     // prompt the user to enter commands
-    public void prompt() throws Exception {
+    public void prompt() throws IOException {
+        input = new Scanner(System.in);
         while(true) {
             System.out.print("(command) ");
-            try {
-                command = input.nextLine();
-            } catch(NoSuchElementException ex) {
-                ex.printStackTrace();
-            }
+            command = input.nextLine();
 
             if(command.equals("exit")) {
                 // write to file and then exit
