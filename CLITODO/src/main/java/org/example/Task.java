@@ -14,6 +14,11 @@ public class Task implements Serializable {
     private boolean subtasksExist;
     private Map<Integer, Task> subtasks;
 
+    private final String RED = "\033[91m"; // today's the deadline or it's just 2 days away or the task has crossed the deadline
+    private final String CYAN = "\033[96m"; // deadline's far away
+    private final String GREEN = "\033[92m"; // task has been completed
+    private final String DEFAULT = "\033[39m";
+
     public Task(int id, String name, String dueDate, TaskType type) {
         this.id = id;
         this.name = name;

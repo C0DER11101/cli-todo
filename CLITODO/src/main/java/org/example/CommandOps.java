@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+// TODO: Color the tasks based on how far the deadline is
+
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
@@ -121,6 +123,11 @@ public class CommandOps {
                     dueDate = formatter.format(currentDate); // set the date format to dd/MM/YYYY
                 }
 
+                if(hasDuplicateTasks(taskBody)) {
+                    System.out.println("A task with the same name already exists...");
+                    return Status.ERROR;
+                }
+
                 if(ids.contains("-")) { // a subtask was created
                     // retrieve project id and the subtask id
                     int projectId = Integer.parseInt(ids.trim().split("-")[0]);
@@ -134,7 +141,13 @@ public class CommandOps {
                     }
 
                     // add the subtask
-                    tasks.get(projectId).addSubtask(subtaskId, taskBody, dueDate, TaskType.SUBTASK);
+                    Task task = tasks.get(projectId);
+                    if(task.getTaskType() == TaskType.TASK) {
+                        System.out.println("Only a project can have a subtask...");
+                        return Status.ERROR;
+                    }
+                    task.addSubtask(subtaskId, taskBody, dueDate, TaskType.SUBTASK);
+
                 } else { // if a project/task was created
                     int id = Integer.parseInt(ids);
                     if(tasks.get(id) == null) {
@@ -217,12 +230,21 @@ public class CommandOps {
                     System.out.println("The project/task with id " + id + " doesn't exist");
                     return Status.ERROR;
                 }
-                if(target.hasUndoneSubtasks()) {
-                    System.out.println("This project has undone tasks, not marking it");
+
+                if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[0])) {
+                    if (target.hasUndoneSubtasks()) {
+                        System.out.println("This project has undone tasks, not marking it");
+                        return Status.ERROR;
+                    } else {
+                        target.markTaskDone();
+                        return Status.VALID;
+                    }
+                } else if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
+                    System.out.println("The task is a project, not marking it");
                     return Status.ERROR;
-                } else {
-                    target.markTaskDone();
-                    return Status.VALID;
+                } else if(target.getTaskType() == TaskType.TASK && specifier.equals(SPECIFIERS[0])) {
+                    System.out.println("The task is not a project, not marking it");
+                    return Status.ERROR;
                 }
             }
         } else if(prefix.equals(COMMANDS[4])) {
@@ -241,6 +263,7 @@ public class CommandOps {
                 // a project/subtask/task needs to edited
                 Task target = tasks.get(projectId);
                 Task subtask = null;
+
                 if(target == null && subtaskId >= 0) {
                     System.out.println("Project of the subtask doesn't exist, not editing");
                     return Status.ERROR;
@@ -257,6 +280,14 @@ public class CommandOps {
                     }
                 }
 
+                if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
+                    System.out.println("The task is a project, not editing it");
+                    return Status.ERROR;
+                } else if(target.getTaskType() == TaskType.TASK && specifier.equals(SPECIFIERS[0])) {
+                    System.out.println("The task is not a project, not editing it");
+                    return Status.ERROR;
+                }
+
                 System.out.println("What do you want to edit ? ");
                 System.out.println("[1] Task name");
                 System.out.println("[2] Task due date");
@@ -271,8 +302,16 @@ public class CommandOps {
                         String taskName;
                         System.out.print("Enter the new name for the task: ");
                         taskName = input.nextLine();
+
+                        if(hasDuplicateTasks(taskName)) {
+                            System.out.println("A task with the same name already exists...");
+                            return Status.ERROR;
+                        }
+
                         if (subtask == null) {
-                            if (isValidProjectName(taskName)) // follow the convention of naming projects
+                            if (target.getTaskType() == TaskType.PROJECT && isValidProjectName(taskName)) // follow the convention of naming projects
+                                target.setName(taskName);
+                            else if(target.getTaskType() == TaskType.TASK)
                                 target.setName(taskName);
                             else
                                 System.out.println("Invalid name...");
@@ -368,7 +407,7 @@ public class CommandOps {
                     return false;
             }
         } else if (prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) {
-            if(specifier.equals(SPECIFIERS[0]) || prefix.equals(SPECIFIERS[2])) {
+            if(specifier.equals(SPECIFIERS[0]) || specifier.equals(SPECIFIERS[2])) {
                 if(!regex.matches(TASK_REGEX))
                     return false;
             } else if(specifier.equals(SPECIFIERS[1])) {
@@ -402,12 +441,28 @@ public class CommandOps {
                 if(month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
                     if(dayOfMonth >= 1 && dayOfMonth <= 31) {
                         dueDate = components[components.length - 1];
+                        if(year == currentDate.getYear()) {
+                            if(month == currentDate.getMonthValue()) {
+                                if(dayOfMonth < currentDate.getDayOfMonth())
+                                    return DateState.INVALID;
+                            } else if(month < currentDate.getMonthValue()) {
+                                return DateState.INVALID;
+                            }
+                        }
                         return DateState.VALID;
                     }
                     return DateState.INVALID;
                 } else if(month == 2) {
                     if(isLeap(year) ? dayOfMonth >= 1 && dayOfMonth <= 29 : dayOfMonth >= 1 && dayOfMonth <= 28) {
                         dueDate = components[components.length - 1];
+                        if(year == currentDate.getYear()) {
+                            if(month == currentDate.getMonthValue()) {
+                                if(dayOfMonth < currentDate.getDayOfMonth())
+                                    return DateState.INVALID;
+                            } else if(month < currentDate.getMonthValue()) {
+                                return DateState.INVALID;
+                            }
+                        }
                         return DateState.VALID;
                     }
 
@@ -415,6 +470,14 @@ public class CommandOps {
                 } else {
                     if(dayOfMonth >= 1 && dayOfMonth <= 30) {
                         dueDate = components[components.length - 1];
+                        if(year == currentDate.getYear()) {
+                            if(month == currentDate.getMonthValue()) {
+                                if(dayOfMonth < currentDate.getDayOfMonth())
+                                    return DateState.INVALID;
+                            } else if(month < currentDate.getMonthValue()) {
+                                return DateState.INVALID;
+                            }
+                        }
                         return DateState.VALID;
                     }
                     return DateState.INVALID;
@@ -436,6 +499,32 @@ public class CommandOps {
     }
 
     /**
+     * Is there any task with the same name ?
+     * @param taskName
+     * @return boolean
+     */
+    private boolean hasDuplicateTasks(String taskName) {
+        Set<Integer> projectIds = tasks.keySet();
+
+        for(int projectId : projectIds) {
+            Task project = tasks.get(projectId);
+            if(taskName.equalsIgnoreCase(project.getName()))
+                return true;
+
+            if(project.hasSubtasks()) {
+                Set<Integer> subtaskIds = project.getSubtasks();
+                for(int subtaskId : subtaskIds) {
+                    Task subtask = project.getSubtask(subtaskId);
+                    if(taskName.equalsIgnoreCase(subtask.getName()))
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Returns the task body i.e. the name of the task.
      * @param commandComponents
      * @return
@@ -448,8 +537,14 @@ public class CommandOps {
         }
 
         // for the 'subtask' or 'task' specifiers
-        for(int i = 3; i < commandComponents.length && commandComponents[i].charAt(0) != ':'; i++)
+        int index = -1;
+        for(int i = 3; i < commandComponents.length && !commandComponents[i].contains(":"); i++) {
+            index = i;
             body.append(commandComponents[i] + " ");
+        }
+
+        if(index + 1 < commandComponents.length)
+            body.append(commandComponents[index + 1].split(":")[0]);
         return body.toString();
     } /*ENDOF getTaskBody */
 
