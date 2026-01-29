@@ -42,6 +42,7 @@ public class CommandOps {
             "delete",
             "tick", // tick mark a task as done
             "edit",
+            "untick",
             "list",
             "exit"
     };
@@ -91,8 +92,8 @@ public class CommandOps {
             } else if(prefix.equals("list")) {
                 listCommands();
                 return Status.VALID;
-            } else if(prefix.equals(COMMANDS[0]) || prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) {
-                // prefix is either 'create', 'delete', 'tick' or 'edit'
+            } else if(prefix.equals(COMMANDS[0]) || prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4]) || prefix.equals(COMMANDS[5])) {
+                // prefix is either 'create', 'delete', 'tick', 'edit' or 'untick'
                 if(commandComponents.length < 3)
                     return Status.INVALID;
                 // validate the specifier
@@ -216,7 +217,7 @@ public class CommandOps {
                     }
 
                     if(tasks.get(projectId).markSubtaskDone(subtaskId))
-                        System.out.println("Subtask marked as 'done'");
+                        System.out.println("Subtask marked 'done'");
                     else
                         System.out.println("Subtask not found");
                     return Status.VALID;
@@ -235,6 +236,7 @@ public class CommandOps {
                         return Status.ERROR;
                     } else {
                         target.markTaskDone();
+                        System.out.println("Project marked 'done'");
                         return Status.VALID;
                     }
                 } else if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
@@ -243,6 +245,10 @@ public class CommandOps {
                 } else if(target.getTaskType() == TaskType.TASK && specifier.equals(SPECIFIERS[0])) {
                     System.out.println("The task is not a project, not marking it");
                     return Status.ERROR;
+                } else {
+                    target.markTaskDone();
+                    System.out.println("Task marked 'done'");
+                    return Status.VALID;
                 }
             }
         } else if(prefix.equals(COMMANDS[4])) {
@@ -275,7 +281,15 @@ public class CommandOps {
                     if(subtask == null) {
                         System.out.println("The subtask doesn't exist, not editing");
                         return Status.ERROR;
+                    } else if(subtask.getTaskState() == TaskState.COMPLETED) {
+                        System.out.println("Not editing a completed task...");
+                        return Status.ERROR;
                     }
+                }
+
+                if(target.getTaskState() == TaskState.COMPLETED) {
+                    System.out.println("Not editing a completed task...");
+                    return Status.ERROR;
                 }
 
                 if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
@@ -336,6 +350,48 @@ public class CommandOps {
                 }
 
                 return Status.VALID;
+            }
+        } else if(prefix.equals(COMMANDS[5])) {
+            if(isValidSpecifierRegex(specifierRegex, prefix, specifier)) {
+                String ids = extractTaskID(specifierRegex, prefix, specifier);
+                if(ids.contains("-")) {
+                    int projectId = Integer.parseInt(ids.trim().split("-")[0]);
+                    int subtaskId = Integer.parseInt(ids.trim().split("-")[1]);
+
+                    if(tasks.get(projectId) == null) {
+                        System.out.println("Cannot tick subtask of a non-existent project");
+                        return Status.ERROR;
+                    }
+
+                    if(tasks.get(projectId).unMarkSubtask(subtaskId))
+                        System.out.println("Subtask marked 'undone'");
+                    else
+                        System.out.println("Subtask not found");
+                    return Status.VALID;
+                }
+
+                int id = Integer.parseInt(ids);
+                Task target = tasks.get(id);
+                if(target == null) {
+                    System.out.println("The project/task with id " + id + " doesn't exist");
+                    return Status.ERROR;
+                }
+
+                if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[0])) {
+                    target.unMarkTask();
+                    System.out.println("Project marked 'undone'");
+                    return Status.VALID;
+                } else if(target.getTaskType() == TaskType.PROJECT && specifier.equals(SPECIFIERS[2])) {
+                    System.out.println("The task is a project, not unmarking it");
+                    return Status.ERROR;
+                } else if(target.getTaskType() == TaskType.TASK && specifier.equals(SPECIFIERS[0])) {
+                    System.out.println("The task is not a project, not unmarking it");
+                    return Status.ERROR;
+                } else {
+                    target.unMarkTask();
+                    System.out.println("Task marked 'undone'");
+                    return Status.VALID;
+                }
             }
         }
         return Status.INVALID;
@@ -404,7 +460,7 @@ public class CommandOps {
                 if (!regex.matches(TASK_REGEX))
                     return false;
             }
-        } else if (prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4])) {
+        } else if (prefix.equals(COMMANDS[2]) || prefix.equals(COMMANDS[3]) || prefix.equals(COMMANDS[4]) || prefix.equals(COMMANDS[5])) {
             if(specifier.equals(SPECIFIERS[0]) || specifier.equals(SPECIFIERS[2])) {
                 if(!regex.matches(TASK_REGEX))
                     return false;
@@ -541,7 +597,7 @@ public class CommandOps {
             body.append(commandComponents[i] + " ");
         }
 
-        if(index + 1 < commandComponents.length)
+        if(index + 1 < commandComponents.length && index +1 != 0)
             body.append(commandComponents[index + 1].split(":")[0]);
         return body.toString();
     } /*ENDOF getTaskBody */

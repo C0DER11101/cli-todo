@@ -114,10 +114,21 @@ public class Task implements Serializable {
         this.state = TaskState.COMPLETED;
     }
 
+    public void unMarkTask() {
+        this.state = TaskState.INCOMPLETE;
+    }
+
     public boolean markSubtaskDone(int id) {
         if(subtasks.get(id) == null)
             return false;
         subtasks.get(id).state = TaskState.COMPLETED;
+        return true;
+    }
+
+    public boolean unMarkSubtask(int id) {
+        if(subtasks.get(id) == null)
+            return false;
+        subtasks.get(id).state = TaskState.INCOMPLETE;
         return true;
     }
 
