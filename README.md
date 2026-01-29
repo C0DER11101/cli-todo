@@ -9,6 +9,7 @@ This is a very simple CLI-based todo-list generator that I have attempted to bui
 	* `delete` &rarr; delete a project/subtask/task.
 	* `show-tasks` &rarr; display the tasks.
 	* `tick` &rarr; mark a project/subtask/task as done.
+	* `untick` &rarr; mark a project/subtask/task as undone.
 	* `edit` &rarr; edit a project/subtask/task.
 	* `list` &rarr; list the supported commands.
 	* `exit` &rarr; quit the program.
