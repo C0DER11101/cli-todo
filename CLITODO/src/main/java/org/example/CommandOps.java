@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-// TODO: Color the tasks based on how far the deadline is
-
 /**
  * This class contains methods to validate and execute the commands entered by the user
  */
