@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.io.Serializable;
+import java.time.LocalDate;
 
 public class Task implements Serializable {
     private int id;
@@ -14,10 +15,12 @@ public class Task implements Serializable {
     private boolean subtasksExist;
     private Map<Integer, Task> subtasks;
 
-    private final String RED = "\033[91m"; // today's the deadline or it's just 2 days away or the task has crossed the deadline
-    private final String CYAN = "\033[96m"; // deadline's far away
-    private final String GREEN = "\033[92m"; // task has been completed
-    private final String DEFAULT = "\033[39m";
+    private final String[] COLORS = {
+            "\033[91m", // RED: today's the deadline or it's just 2 days away or the task has crossed the deadline
+            "\033[96m", // CYAN: deadline's more than a week away
+            "\033[92m", // GREEN: task has been completed
+            "\033[39m" // DEFAULT
+    };
 
     public Task(int id, String name, String dueDate, TaskType type) {
         this.id = id;
@@ -141,8 +144,38 @@ public class Task implements Serializable {
         return false;
     }
 
+    private String colorizeTask() {
+        String[] dateComponents = dueDate.trim().split("[-/]");
+        int year = Integer.parseInt(dateComponents[2]);
+        int month = Integer.parseInt(dateComponents[1]);
+        int day = Integer.parseInt(dateComponents[0]);
+
+        LocalDate currentDate = LocalDate.now();
+
+        if(state == TaskState.INCOMPLETE) {
+            if (year == currentDate.getYear()) {
+                if (month == currentDate.getMonthValue()) {
+                    if (day - currentDate.getDayOfMonth() > 2)
+                        return COLORS[1];
+                    else
+                        return COLORS[0];
+                } else if (month > currentDate.getMonthValue()) {
+                    return COLORS[1];
+                } else {
+                    return COLORS[0];
+                }
+            } else if (year > currentDate.getYear()) {
+                return COLORS[1];
+            } else {
+                return COLORS[0];
+            }
+        }
+
+        return COLORS[2];
+    }
+
     @Override
     public String toString() {
-        return id + ": " + name + " " + dueDate;
+        return colorizeTask() + id + ": " + name + " " + dueDate + COLORS[3];
     }
 }
