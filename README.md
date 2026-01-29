@@ -84,6 +84,22 @@ To edit a task:
 edit task #<task-id>
 ```
 
+## `untick` command
+To untick a project:
+```
+untick project #<project-id>
+```
+
+To untick a subtask:
+```
+untick subtask #<project-id>:#<subtask-id>
+```
+
+To untick a task:
+```
+untick task #<task-id>
+```
+
 # `NoSuchElementException` in `Scanner`
 
 While working on my `edit` command I encountered this exception. I was actually using the try-with-resources statement to create a `Scanner` object and then using it to take input from the user. Because the object was created via the try-with-resources statement, it was automatically closed at the end of the block. As a result of this, the standard input stream was also closed which meant that any other `Scanner` object attempting to read from `System.in` will fail and this exception will be thrown.
@@ -125,5 +141,20 @@ Creating subtasks:
 * `tick` command
 
 <img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss9.png" width="50%" height="50%">
+
+* `untick` command
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss16.png" width="50%" height="50%">
+
+# Update
+Tasks are now colorized based on how far the deadline is.
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss10.png" width="50%" height="50%">
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss11.png" width="50%" height="50%">
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss12.png" width="50%" height="50%">
+
+<img src="https://github.com/C0DER11101/cli-todo/blob/cli-todo/screenshots/ss14.png" width="50%" height="50%">
 
 ---
