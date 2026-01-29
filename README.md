@@ -60,7 +60,7 @@ tick project #<project-id>
 
 To mark a subtask as done:
 ```
-tick subtask #<subtask-id>
+tick subtask #<project-id>:#<subtask-id>
 ```
 
 To mark a task as done:
@@ -76,10 +76,10 @@ edit project #<project-id>
 
 To edit a subtask:
 ```
-edit subtask #<subtask-id>
+edit subtask #<project-id>:#<subtask-id>
 ```
 
-To mark a task as done:
+To edit a task:
 ```
 edit task #<task-id>
 ```
